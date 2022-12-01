@@ -1,0 +1,5 @@
+*.txt
+*.grib
+*.inp
+/SMARTS
+/Gas_Maps
