@@ -375,7 +375,7 @@ class mass:
                 self.time_interval = kwargs['time_interval']
 
 
-def spectrum(surface_pressure, altitude, site_temp, relative_humidity, season, average_daily_temperature, formaldehyde, methane, carbon_monoxide, nitric_acid, nitrogen_dioxide, ozone3, sulfur_dioxide, carbon_dioxide_ab, aerosol_model, TAU550, year, month, day, hour, latitude, longitude, timezone):
+def spectrum(surface_pressure, altitude, site_temp, relative_humidity, season, average_daily_temperature, formaldehyde, methane, carbon_monoxide, nitric_acid, nitrogen_dioxide, ozone3, sulfur_dioxide, carbon_dioxide_ab, aerosol_model, TAU550, water_vapour, year, month, day, hour, latitude, longitude, timezone):
         A = comment('')
         B = input_file()
         B = B.add_comment(A)
@@ -386,10 +386,10 @@ def spectrum(surface_pressure, altitude, site_temp, relative_humidity, season, a
         A = atmosphere(0,atmospheric_site_temp=site_temp, relative_humidity=relative_humidity,season=season, average_daily_temp=average_daily_temperature)
         B = B.add_atmosphere(A)
 
-        A = water_vapor(1)
+        A = water_vapor(0, water=water_vapour)
         B = B.add_water_vapor(A)
 
-        A = ozone(0,altitude_correction=0,abundance=ozone3/1e1)
+        A = ozone(0,altitude_correction=0,abundance=ozone3*1e1)
         B = B.add_ozone(A)
 
         A = gas(0, load=0, formaldehyde=formaldehyde, methane=methane, carbon_monoxide=carbon_monoxide, nitrous_acid=0, nitric_acid=nitric_acid, nitric_oxide=0, nitrogen_dioxide=nitrogen_dioxide, nitrogen_trioxide=0, ozone=ozone3, sulfur_dioxide=sulfur_dioxide)
@@ -426,17 +426,17 @@ def spectrum(surface_pressure, altitude, site_temp, relative_humidity, season, a
         A = ultra_violet(0)
         B = B.add_ultra_violet(A)
 
-        A = mass(3, year=year, month=month, day=day, hour=hour, latitude=latitude, longitude=longitude, time_zone =timezone)
+        A = mass(3, year=year, month=month, day=day, hour=hour, latitude=latitude, longitude=longitude, time_zone=timezone)
         B = B.add_mass(A)
-
+        
         B.save()
         B.run()
         try:
-            wavelength, irradiance = B.retrive()
-            B.delete()
-            return wavelength, irradiance
+           wavelength, irradiance = B.retrive()
+           B.delete()
+           return wavelength, irradiance
         except:
-            B.delete()
+           B.delete()
 
 if __name__ == '__main__':
     X = np.linspace(0,100,10)
