@@ -27,7 +27,7 @@ class atmosphere_analysis:
                 self.EAC4 = pygrib.open(EAC4)
                 self.EGG4 = pygrib.open(EGG4)
             case 'cfgrib':
-                self.EAC4 = xr.open_dataset(EAC4,engine='cfgrib')
+                self.EAC4 = xr.open_dataset(EAC4,engine='cfgrib',backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}})
                 self.EGG4 = xr.open_dataset(EGG4,engine='cfgrib')
     
     
@@ -55,14 +55,15 @@ class atmosphere_analysis:
         self.water_vapor = np.zeros((241,480))
         self.TAU550 = np.zeros((241,480))
         data = self.EAC4.sel(time=self.date)
+        print(data)
         self.carbon_monoxide = data['co'].to_numpy()
         self.formaldehyde = data['hcho'].to_numpy()
         self.nitric_acid = data['hno3'].to_numpy()
         self.nitrogen_dioxide = data['no2'].to_numpy()
         self.ozone = data['go3'].to_numpy()
         self.sulfur_dioxide = data['so2'].to_numpy()
-        self.air_temperature_k = data['t'].to_numpy()
-        self.air_temperature = data['t'].to_numpy() - 273.15
+        self.air_temperature_k = data['t2m'].to_numpy()
+        self.air_temperature = data['t'].to_numpy() #- 273.15
         self.surface_air_pressure = data['sp'].to_numpy()
         self.TAU550 = data['aod550'].to_numpy()
         self.water_vapor = data['tcwv'].to_numpy()
@@ -111,7 +112,7 @@ class atmosphere_analysis:
                         self.sulfur_dioxide = set.values
                     case 'air_temperature':
                         self.air_temperature_k = set.values
-                        self.air_temperature = set.values - 273.15
+                        self.air_temperature = set.values #- 273.15
                     case 'surface_air_pressure':
                         self.surface_air_pressure = set.values * 0.01
                     case 'lwe_thickness_of_atmosphere_mass_content_of_water_vapor':
@@ -290,9 +291,9 @@ class atmosphere_analysis:
         
 
 if __name__ == '__main__':
-    A = atmosphere_analysis('EAC4_2019_SeaLevel.grib','EGG4_2019_SeaLevel.grib',2019,1,1,0,54.767273,-1.568486,'cfgrib')
+    A = atmosphere_analysis('EAC4_GroundLevel_2019.grib','EGG4_2019_SeaLevel.grib',2019,1,1,0,54.767273,-1.568486,'cfgrib')
     #A.get_arg_location()
-    A.get_gasses()
+    #A.get_gasses()
     #plt.imshow(A.TAU550)
     #plt.colorbar()
     #plt.show()

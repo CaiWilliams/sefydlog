@@ -4,6 +4,13 @@
 *.avi
 *.idx
 *.png
+*.dat
+*.json
+*.csv
+*.cpython-310.pyc
+/devices
+/__pycache__
+/GPVDM
 /SMARTS
 /Gas_Maps
 /2003
