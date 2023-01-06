@@ -8,7 +8,7 @@ def plot(name):
     file = os.path.join(os.getcwd(),'Results',name+'.csv')
     data = pd.read_csv(file)
     data = data['PCE']
-    plt.plot(data[::])
+    plt.plot(data[::24])
     return data
 
 def plot_diff(A,B):
@@ -22,17 +22,30 @@ def plot_diff(A,B):
     plt.ylabel('Change in PCE due to Polution (%)')
     return data
 
+def calc_power(name):
+    file = os.path.join(os.getcwd(),'Results',name+'.csv')
+    data = pd.read_csv(file)
+    data = data['Pmax']
+    x = np.arange(len(data))
+    xvals = np.arange(len(data)*3)/3
+    yvals = np.interp(xvals,x,data.to_numpy())
+    plt.plot(np.cumsum(yvals)/1e3)
+    return
+
+
+
 # plot_diff('P3HTPCBM_Mexico_City_Pristine_2019','P3HTPCBM_Mexico_City_2019')
 # plot_diff('P3HTPCBM_Zhengzhou_Pristine_2019','P3HTPCBM_Zhengzhou_2019')
 # plot_diff('P3HTPCBM_Lahore_Pristine_2019','P3HTPCBM_Lahore_2019')
 # plot_diff('P3HTPCBM_San_Juan_Pristine_2019','P3HTPCBM_San_Juan_2019')
 # plot_diff('P3HTPCBM_Durham_Pristine_2019','P3HTPCBM_Durham_2019')
 
-plot('P3HTPCBM_Mexico_City_2019')
+# plot('P3HTPCBM_Mexico_City_2019')
 # plot('P3HTPCBM_Zhengzhou_2019')
 # plot('P3HTPCBM_Lahore_2019')
 # plot('P3HTPCBM_Lahore_Pristine_2019')
 # plot('P3HTPCBM_San_Juan_2019')
-#plot('P3HTPCBM_Durham_Test_2019')
-
+# plot('P3HTPCBM_Durham_2019')
+calc_power('P3HTPCBM_Mexico_City_2019')
+calc_power('P3HTPCBM_Mexico_City_Pristine_2019')
 plt.show()

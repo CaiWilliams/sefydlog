@@ -7,7 +7,6 @@
 *.dat
 *.json
 *.csv
-*.cpython-310.pyc
 /devices
 /__pycache__
 /GPVDM

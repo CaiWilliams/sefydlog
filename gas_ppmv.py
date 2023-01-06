@@ -27,7 +27,7 @@ class atmosphere_analysis:
                 self.EAC4 = pygrib.open(EAC4)
                 self.EGG4 = pygrib.open(EGG4)
             case 'cfgrib':
-                self.EAC4 = xr.open_dataset(EAC4,engine='cfgrib',backend_kwargs={'filter_by_keys': {'typeOfLevel': 'surface'}})
+                self.EAC4 = xr.open_dataset(EAC4,engine='cfgrib')
                 self.EGG4 = xr.open_dataset(EGG4,engine='cfgrib')
     
     
@@ -62,7 +62,7 @@ class atmosphere_analysis:
         self.nitrogen_dioxide = data['no2'].to_numpy()
         self.ozone = data['go3'].to_numpy()
         self.sulfur_dioxide = data['so2'].to_numpy()
-        self.air_temperature_k = data['t2m'].to_numpy()
+        self.air_temperature_k = data['t'].to_numpy()
         self.air_temperature = data['t'].to_numpy() #- 273.15
         self.surface_air_pressure = data['sp'].to_numpy()
         self.TAU550 = data['aod550'].to_numpy()
