@@ -410,7 +410,7 @@ def spectrum_pristine(surface_pressure, altitude, site_temp, relative_humidity, 
     #     az = 0
     #     tilt = latitude * 0.9 - 23.5
     # A = abledo(38, tilt = 1, albdg=38, surface_angle=tilt, surface_azimuth=az)
-    A  = abledo(38, tilit=0)
+    A  = abledo(38, tilt=0)
     #A = abledo(20, tilt = 1, albdg=20, surface_angle=37, surface_azimuth=90)
     B = B.add_abledo(A)
 
@@ -479,6 +479,7 @@ def spectrum(surface_pressure, altitude, site_temp, relative_humidity, season, a
         else:
             az = 0
             tilt = latitude * 0.9 - 23.5
+            
         A = abledo(38, tilt = 0)
         #A = abledo(38, tilt = 1, albdg=38, surface_angle=tilt, surface_azimuth=az)
         #A = abledo(20, tilt = 1, albdg=20, surface_angle=37, surface_azimuth=90)

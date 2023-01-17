@@ -78,23 +78,23 @@ def run(EAC4,EGG4,start_date,end_date):
          pass
 
 if __name__ == '__main__':
-    EAC4 = 'EAC4_2010.grib'
-    EGG4 = 'EGG4_2010_SeaLevel.grib'
-    start_date =  datetime.datetime(2010,1,1,0)
-    end_date = datetime.datetime(2010,12,31,21)
+    # EAC4 = 'EAC4_2010.grib'
+    # EGG4 = 'EGG4_2010_SeaLevel.grib'
+    # start_date =  datetime.datetime(2010,1,1,0)
+    # end_date = datetime.datetime(2010,12,31,21)
+    # run(EAC4,EGG4,start_date,end_date)
+
+    EAC4 = 'EAC4_2007.grib'
+    EGG4 = 'EGG4_2007.grib'
+    start_date =  datetime.datetime(2007,1,1,0)
+    end_date = datetime.datetime(2007,12,31,21)
     run(EAC4,EGG4,start_date,end_date)
 
-    EAC4 = 'EAC4_2008.grib'
-    EGG4 = 'EGG4_2008_SeaLevel.grib'
-    start_date =  datetime.datetime(2008,1,1,0)
-    end_date = datetime.datetime(2008,12,31,21)
-    run(EAC4,EGG4,start_date,end_date)
-
-    EAC4 = 'EAC4_2020.grib'
-    EGG4 = 'EGG4_2020.grib'
-    start_date =  datetime.datetime(2020,1,1,0)
-    end_date = datetime.datetime(2020,12,31,21)
-    run(EAC4,EGG4,start_date,end_date)
+    # EAC4 = 'EAC4_2020.grib'
+    # EGG4 = 'EGG4_2020.grib'
+    # start_date =  datetime.datetime(2020,1,1,0)
+    # end_date = datetime.datetime(2020,12,31,21)
+    # run(EAC4,EGG4,start_date,end_date)
 
     #EAC4 = 'EAC4_2005_SeaLevel.grib'
     #EGG4 = 'EGG4_2005_SeaLevel.grib'

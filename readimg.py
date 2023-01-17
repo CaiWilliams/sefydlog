@@ -161,6 +161,7 @@ class Atmosphere():
         timezone = tf.timezone_at(lat=lat,lng=long)
         timezone = datetime.datetime.now(pytz.timezone(str(timezone)))
         timezone = timezone.utcoffset().total_seconds()/60/60
+        print(data)
         carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data
         if latitude < 0:
             if date.month <= 3 or date.month >= 9:
@@ -369,7 +370,7 @@ def run_dates_mp(name,year,longitude,latitude):
         Jsc = fetch_result_mp(idx,'jsc')
         #data = data_list[idx]
         carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data_list[idx]
-        results.loc[idx] = [date,PCE,Pmax,FF,Voc,Jsc,air_temperature,carbon_dioxide,carbon_monoxide,formaldehyde,methane,nitric_acid,nitrogen_dioxide,ozone,relative_humidity,sulfur_dioxide,surface_air_pressure,TAU550,water_vapour]
+        results.loc[idx] = [date,PCE,Pmax,FF,Voc,Jsc,air_temperature,carbon_di,carbon_monoxide,formaldehyde,methane,nitric_acid,nitrogen_dioxide,oz,relative_humidity,sulfur_dioxide,surface_air_pressure,TAU550,water_vapour]
     results.to_csv(os.path.join(os.getcwd(),'Results',name+'_'+str(year)+'.csv'))
 
 def run_dates_mp_pristine(name,year,longitude,latitude):
@@ -398,8 +399,8 @@ def run_dates_mp_pristine(name,year,longitude,latitude):
         Voc = fetch_result_mp(idx,'voc')
         Jsc = fetch_result_mp(idx,'jsc')
         #data = data_list[idx]
-        carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data_list[idx]
-        results.loc[idx] = [date,PCE,Pmax,FF,Voc,Jsc,air_temperature,carbon_dioxide,carbon_monoxide,formaldehyde,methane,nitric_acid,nitrogen_dioxide,ozone,relative_humidity,sulfur_dioxide,surface_air_pressure,TAU550,water_vapour]
+        carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, tau550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data_list[idx]
+        results.loc[idx] = [date,PCE,Pmax,FF,Voc,Jsc,air_temperature,carbon_di,carbon_monoxide,formaldehyde,methane,nitric_acid,nitrogen_dioxide,oz,relative_humidity,sulfur_dioxide,surface_air_pressure,tau550,water_vapour]
     results.to_csv(os.path.join(os.getcwd(),'Results',name+'_'+str(year)+'.csv'))
 
 if __name__ == '__main__':
@@ -408,83 +409,101 @@ if __name__ == '__main__':
 
     #Covid
 
-    run_dates_mp('P3HTPCBM_Mexico_City',2019,-99.129631,19.422804)
-    run_dates_mp_pristine('P3HTPCBM_Mexico_City_Pristine',2019,-99.129631,19.422804)
+    # run_dates_mp('P3HTPCBM_Mexico_City',2019,-99.129631,19.422804)
+    # #run_dates_mp_pristine('P3HTPCBM_Mexico_City_Pristine',2019,-99.129631,19.422804)
 
-    run_dates_mp('P3HTPCBM_Zhengzhou',2019,113.686424,34.756545)
-    run_dates_mp_pristine('P3HTPCBM_Zhengzhou_Pristine',2019,113.686424,34.756545)
+    # run_dates_mp('P3HTPCBM_Zhengzhou',2019,113.686424,34.756545)
+    # #run_dates_mp_pristine('P3HTPCBM_Zhengzhou_Pristine',2019,113.686424,34.756545)
 
-    run_dates_mp('P3HTPCBM_Lahore',2019,74.370776,31.519601)
-    run_dates_mp_pristine('P3HTPCBM_Lahore_Pristine',2019,74.370776,31.519601)
+    # run_dates_mp('P3HTPCBM_Lahore',2019,74.370776,31.519601)
+    # #run_dates_mp_pristine('P3HTPCBM_Lahore_Pristine',2019,74.370776,31.519601)
 
-    run_dates_mp('P3HTPCBM_Durham',2019,-1.5687486,54.767273)
-    run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2019,-1.5687486,54.767273)
+    # run_dates_mp('P3HTPCBM_Durham',2019,-1.5687486,54.767273)
+    # #run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2019,-1.5687486,54.767273)
 
-    run_dates_mp('P3HTPCBM_San_Juan',2019,-66.123175,18.371388)
-    run_dates_mp_pristine('P3HTPCBM_San_Juan_Pristine',2019,-66.123175,18.371388)
+    # run_dates_mp('P3HTPCBM_San_Juan',2019,-66.123175,18.371388)
+    # #run_dates_mp_pristine('P3HTPCBM_San_Juan_Pristine',2019,-66.123175,18.371388)
 
-    run_dates_mp('P3HTPCBM_Mexico_City',2020,-99.129631,19.422804)
-    run_dates_mp_pristine('P3HTPCBM_Mexico_City_Pristine',2020,-99.129631,19.422804)
+    # run_dates_mp('P3HTPCBM_Mexico_City',2020,-99.129631,19.422804)
+    # #run_dates_mp_pristine('P3HTPCBM_Mexico_City_Pristine',2020,-99.129631,19.422804)
 
-    run_dates_mp('P3HTPCBM_Zhengzhou',2020,113.686424,34.756545)
-    run_dates_mp_pristine('P3HTPCBM_Zhengzhou_Pristine',2020,113.686424,34.756545)
+    # run_dates_mp('P3HTPCBM_Zhengzhou',2020,113.686424,34.756545)
+    # #run_dates_mp_pristine('P3HTPCBM_Zhengzhou_Pristine',2020,113.686424,34.756545)
 
-    run_dates_mp('P3HTPCBM_Lahore',2020,74.370776,31.519601)
-    run_dates_mp_pristine('P3HTPCBM_Lahore_Pristine',2020,74.370776,31.519601)
+    # run_dates_mp('P3HTPCBM_Lahore',2020,74.370776,31.519601)
+    # #run_dates_mp_pristine('P3HTPCBM_Lahore_Pristine',2020,74.370776,31.519601)
 
-    run_dates_mp('P3HTPCBM_Durham',2020,-1.5687486,54.767273)
-    run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2020,-1.5687486,54.767273)
+    # run_dates_mp('P3HTPCBM_Durham',2020,-1.5687486,54.767273)
+    # #run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2020,-1.5687486,54.767273)
 
-    run_dates_mp('P3HTPCBM_San_Juan',2020,-66.123175,18.371388)
-    run_dates_mp_pristine('P3HTPCBM_San_Juan_Pristine',2020,-66.123175,18.371388)
+    # run_dates_mp('P3HTPCBM_San_Juan',2020,-66.123175,18.371388)
+    # #run_dates_mp_pristine('P3HTPCBM_San_Juan_Pristine',2020,-66.123175,18.371388)
 
-    #Wild Fires
+    # #Wild Fires
 
-    run_dates_mp('P3HTPCBM_Santa_Clarita',2020,-118.534802,34.387461)
-    run_dates_mp_pristine('P3HTPCBM_Santa_Clarita_Pristine',2020,-118.534802,34.387461)
+    # run_dates_mp('P3HTPCBM_Santa_Clarita',2020,-118.534802,34.387461)
+    # #run_dates_mp_pristine('P3HTPCBM_Santa_Clarita_Pristine',2020,-118.534802,34.387461)
 
-    run_dates_mp('P3HTPCBM_Santa_Clarita',2019,-118.534802,34.387461)
-    run_dates_mp_pristine('P3HTPCBM_Santa_Clarita_Pristine',2019,-118.534802,34.387461)
+    # run_dates_mp('P3HTPCBM_Santa_Clarita',2019,-118.534802,34.387461)
+    # #run_dates_mp_pristine('P3HTPCBM_Santa_Clarita_Pristine',2019,-118.534802,34.387461)
 
-    run_dates_mp('P3HTPCBM_Malibu',2020,-118.785394,34.029256)
-    run_dates_mp_pristine('P3HTPCBM_Malibu_Pristine',2020,-118.785394,34.029256)
+    # run_dates_mp('P3HTPCBM_Malibu',2020,-118.785394,34.029256)
+    # #run_dates_mp_pristine('P3HTPCBM_Malibu_Pristine',2020,-118.785394,34.029256)
 
-    run_dates_mp('P3HTPCBM_Malibu',2019,-118.785394,34.029256)
-    run_dates_mp_pristine('P3HTPCBM_Malibu_Pristine',2019,-118.785394,34.029256)
+    # run_dates_mp('P3HTPCBM_Malibu',2019,-118.785394,34.029256)
+    # #run_dates_mp_pristine('P3HTPCBM_Malibu_Pristine',2019,-118.785394,34.029256)
 
-    run_dates_mp('P3HTPCBM_Santa_Rosa',2020,-122.772402,38.491299)
-    run_dates_mp_pristine('P3HTPCBM_Santa_Rosa_Pristine',2020,-122.772402,38.491299)
+    # run_dates_mp('P3HTPCBM_Santa_Rosa',2020,-122.772402,38.491299)
+    # # #run_dates_mp_pristine('P3HTPCBM_Santa_Rosa_Pristine',2020,-122.772402,38.491299)
 
-    run_dates_mp('P3HTPCBM_Santa_Rosa',2019,-122.772402,38.491299)
-    run_dates_mp_pristine('P3HTPCBM_Santa_Rosa_Pristine',2019,-122.772402,38.491299)
+    # run_dates_mp('P3HTPCBM_Santa_Rosa',2019,-122.772402,38.491299)
+    # #run_dates_mp_pristine('P3HTPCBM_Santa_Rosa_Pristine',2019,-122.772402,38.491299)
 
-    #Volcano
+    # #Volcano
 
-    run_dates_mp('P3HTPCBM_Durham',2010,-1.5687486,54.767273)
-    run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2010,-1.5687486,54.767273)
+    # run_dates_mp('P3HTPCBM_Durham',2009,-1.5687486,54.767273)
+    # run_dates_mp('P3HTPCBM_Durham',2010,-1.5687486,54.767273)
+    # #run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2010,-1.5687486,54.767273)
+    #run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2009,-1.5687486,54.767273)
 
-    run_dates_mp('P3HTPCBM_Montreal',2010,-73.560738,45.493144)
-    run_dates_mp_pristine('P3HTPCBM_Montreal_Pristine',2010,-73.560738,45.493144)
+    # run_dates_mp('P3HTPCBM_Montreal',2009,-73.560738,45.493144)
+    # run_dates_mp('P3HTPCBM_Montreal',2010,-73.560738,45.493144)
+    # #run_dates_mp_pristine('P3HTPCBM_Montreal_Pristine',2010,-73.560738,45.493144)
+    #run_dates_mp_pristine('P3HTPCBM_Montreal_Pristine',2009,-73.560738,45.493144)
 
-    run_dates_mp('P3HTPCBM_Reykjavik',2010,-21.82895,64.117009)
-    run_dates_mp_pristine('P3HTPCBM_Reykjavik_Pristine',2010,-21.82895,64.117009)
+    run_dates_mp('P3HTPCBM_Reykjavik',2009,-21.82895,64.117009)
+    # run_dates_mp('P3HTPCBM_Reykjavik',2010,-21.82895,64.117009)
+    # #run_dates_mp_pristine('P3HTPCBM_Reykjavik_Pristine',2010,-21.82895,64.117009)
+    #run_dates_mp_pristine('P3HTPCBM_Reykjavik_Pristine',2009,-21.82895,64.117009)
 
-    #Olympics
+    # #Olympics
 
-    run_dates_mp('P3HTPCBM_Beijing',2008,116.533129,39.9154649)
-    run_dates_mp_pristine('P3HTPCBM_Beijing_Pristine',2008,116.533129,39.9154649)
+    # run_dates_mp('P3HTPCBM_Beijing',2007,116.533129,39.9154649)
+    # run_dates_mp('P3HTPCBM_Beijing',2008,116.533129,39.9154649)
+    # run_dates_mp_pristine('P3HTPCBM_Beijing_Pristine',2007,116.533129,39.9154649)
+    # #run_dates_mp_pristine('P3HTPCBM_Beijing_Pristine',2008,116.533129,39.9154649)
 
-    run_dates_mp('P3HTPCBM_Guangzhou',2008,113.288508,23.106849)
-    run_dates_mp_pristine('P3HTPCBM_Guangzhou_Pristine',2008,113.288508,23.106849)
+    # run_dates_mp('P3HTPCBM_Guangzhou',2007,113.288508,23.106849)
+    # run_dates_mp('P3HTPCBM_Guangzhou',2008,113.288508,23.106849)
+    # run_dates_mp_pristine('P3HTPCBM_Guangzhou_Pristine',2007,113.288508,23.106849)
+    # #run_dates_mp_pristine('P3HTPCBM_Guangzhou_Pristine',2008,113.288508,23.106849)
 
-    run_dates_mp('P3HTPCBM_Chengdu',2008,104.168877,30.636373)
-    run_dates_mp_pristine('P3HTPCBM_Chengdu_Pristine',2008,104.168877,30.636373)
+    # run_dates_mp('P3HTPCBM_Chengdu',2007,104.168877,30.636373)
+    # run_dates_mp('P3HTPCBM_Chengdu',2008,104.168877,30.636373)
+    # run_dates_mp_pristine('P3HTPCBM_Chengdu_Pristine',2007,104.168877,30.636373)
+    # #run_dates_mp_pristine('P3HTPCBM_Chengdu_Pristine',2008,104.168877,30.636373)
 
-    run_dates_mp('P3HTPCBM_London',2008,-0.010573,51.542710)
-    run_dates_mp_pristine('P3HTPCBM_London_Pristine',2008,-0.010573,51.542710)
+    # run_dates_mp('P3HTPCBM_London',2007,-0.010573,51.542710)
+    # run_dates_mp('P3HTPCBM_London',2008,-0.010573,51.542710)
+    # run_dates_mp_pristine('P3HTPCBM_London_Pristine',2007,-0.010573,51.542710)
+    # #run_dates_mp_pristine('P3HTPCBM_London_Pristine',2008,-0.010573,51.542710)
 
-    run_dates_mp('P3HTPCBM_Rio',2008,-43.178719,-22.917613)
-    run_dates_mp_pristine('P3HTPCBM_Rio_Pristine',2008,43.178719,-22.917613)
+    # run_dates_mp('P3HTPCBM_Rio',2007,-43.178719,-22.917613)
+    # run_dates_mp('P3HTPCBM_Rio',2008,-43.178719,-22.917613)
+    run_dates_mp_pristine('P3HTPCBM_Rio_Pristine',2007,43.178719,-22.917613)
+    # #run_dates_mp_pristine('P3HTPCBM_Rio_Pristine',2008,43.178719,-22.917613)
 
-    run_dates_mp('P3HTPCBM_Tokyo',2008,139.775831,35.667202)
-    run_dates_mp_pristine('P3HTPCBM_Tokyo_Pristine',2008,139.775831,35.667202)
+    # run_dates_mp('P3HTPCBM_Tokyo',2007,139.775831,35.667202)
+    # run_dates_mp('P3HTPCBM_Tokyo',2008,139.775831,35.667202)
+    # run_dates_mp_pristine('P3HTPCBM_Tokyo_Pristine',2007,139.775831,35.667202)
+    # #run_dates_mp_pristine('P3HTPCBM_Tokyo_Pristine',2008,139.775831,35.667202)
