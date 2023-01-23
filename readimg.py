@@ -13,6 +13,7 @@ from GPVDM import *
 import multiprocessing
 import tqdm
 import pandas as pd
+from Equivelent_Circuit import *
 
 class Atmosphere():
     def __init__(self,year,month,day,hour):
@@ -121,11 +122,11 @@ class Atmosphere():
                 season = 'WINTER'
             else:
                 season = 'SUMMER'
-        try:
-            wavelength,intensity = spectrum(self.surface_air_pressure/100,0,self.air_temperature,self.relative_humidity,season,self.air_temperature,self.formaldehyde,self.methane,self.carbon_monoxide,self.nitric_acid,self.nitrogen_dioxide,self.ozone,self.sulfur_dioxide,self.carbon_dioxide,'S&F_RURAL',self.TAU550,self.water_vapour,self.year,self.month,self.day,self.hour,self.latitude,self.longitude,timezone) 
-        except:
-            wavelength = 0 
-            intensity = 0
+        #try:
+        wavelength,intensity = spectrum(self.surface_air_pressure/100,0,self.air_temperature,self.relative_humidity,season,self.air_temperature,self.formaldehyde,self.methane,self.carbon_monoxide,self.nitric_acid,self.nitrogen_dioxide,self.ozone,self.sulfur_dioxide,self.carbon_dioxide,'S&F_RURAL',self.TAU550,self.water_vapour,self.year,self.month,self.day,self.hour,self.latitude,self.longitude,timezone) 
+        #except:
+        #    wavelength = 0 
+        #    intensity = 0
         return wavelength, intensity
     
     def generate_spectrum_standalone(latitude, longitude, date, data):
@@ -161,7 +162,6 @@ class Atmosphere():
         timezone = tf.timezone_at(lat=lat,lng=long)
         timezone = datetime.datetime.now(pytz.timezone(str(timezone)))
         timezone = timezone.utcoffset().total_seconds()/60/60
-        print(data)
         carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data
         if latitude < 0:
             if date.month <= 3 or date.month >= 9:
@@ -248,6 +248,30 @@ def save_to_oghma(longitude, latitude, year, month, day, hour):
     np.savetxt(dir, data, delimiter='\t',header=header)
     return
 
+def fetch_wavlength_intensity(data):
+    longitude = data[0]
+    latitude = data[1]
+    idx = data[2]
+    date = data[3]
+    data = data[4]
+    #lock.acquire()
+    wavelength, intensity = Atmosphere.generate_spectrum_standalone(latitude,longitude,date,data)
+    #lock.release()
+    try:
+        wavelength = wavelength*1e-9
+        intensity = intensity*1e-9
+    except:
+        wavelength = 0
+        intensity = 0
+    df = pd.DataFrame()
+    df['Wavelength'] = wavelength
+    df['Intensity'] = intensity
+    #header = 'Wavelength\tIntensity'
+    dir = os.path.join(os.getcwd(),'Temp','Spectrums','temp'+str(idx)+'.csv')
+    df.to_csv(dir)
+    #np.savetxt(dir, data, delimiter='\t',header=header)
+    return 
+
 def save_to_oghma_mp(data):
     longitude = data[0]
     latitude = data[1]
@@ -310,6 +334,7 @@ def run_oghma(idx,name):
     G.save_job()
     G.run()
 
+
 def run_oghma_mp(G,idx,temp,name):
     G.create_job_json('TempDevice'+str(idx),name)
     G.modify_pm_json('virtual_spectra','light_spectra',"light_spectrum",category=['optical','light_sources','lights'],layer_name="segment",layer_number=0,value='temp'+str(idx))
@@ -341,6 +366,34 @@ def run_dates():
     plt.plot(dates,results)
     plt.ylabel('PCE (%)')
     plt.show()
+
+def task(longitude,latitude,date):
+        return Atmosphere(date.year,date.month,date.day,date.hour).get_location(longitude, latitude)
+
+
+
+def run_dates_mp_SDM(name,year,longitude,latitude):
+    start_date =  datetime.datetime(year,1,1,12)
+    end_date = datetime.datetime(year,12,31,21)
+    dates = pd.date_range(start=start_date, end=end_date,freq='3H').to_pydatetime().tolist()
+    results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
+    #data_list = []
+    #for date in tqdm.tqdm(dates):
+    #    data_list.append(task(longitude,latitude,date))
+
+    data_list = [Atmosphere(date.year,date.month,date.day,date.hour).get_location(longitude, latitude) for date in tqdm.tqdm(dates)]
+    data = [[longitude,latitude,idx,date,data_list[idx]] for idx,date in enumerate(dates)]
+    pool = multiprocessing.Pool(processes=128)
+    for _ in tqdm.tqdm(pool.imap(fetch_wavlength_intensity,data), total=len(data)):
+     pass
+    
+
+    for idx,date in enumerate(tqdm.tqdm(dates)):
+
+        carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data_list[idx]
+        pce,pmax,ff,voc,jsc = run_equivilent_circuit(idx,air_temperature+273.15)
+        results.loc[idx] = [date,pce,pmax,ff,voc,jsc,air_temperature,carbon_di,carbon_monoxide,formaldehyde,methane,nitric_acid,nitrogen_dioxide,oz,relative_humidity,sulfur_dioxide,surface_air_pressure,TAU550,water_vapour]
+    results.to_csv(os.path.join(os.getcwd(),'Results',name+'_'+str(year)+'.csv'))
 
 def run_dates_mp(name,year,longitude,latitude):
     start_date =  datetime.datetime(year,1,1,12)
@@ -471,7 +524,7 @@ if __name__ == '__main__':
     # #run_dates_mp_pristine('P3HTPCBM_Montreal_Pristine',2010,-73.560738,45.493144)
     #run_dates_mp_pristine('P3HTPCBM_Montreal_Pristine',2009,-73.560738,45.493144)
 
-    run_dates_mp('P3HTPCBM_Reykjavik',2009,-21.82895,64.117009)
+    run_dates_mp_SDM('P3HTPCBM_Reykjavik_SDM',2009,-21.82895,64.117009)
     # run_dates_mp('P3HTPCBM_Reykjavik',2010,-21.82895,64.117009)
     # #run_dates_mp_pristine('P3HTPCBM_Reykjavik_Pristine',2010,-21.82895,64.117009)
     #run_dates_mp_pristine('P3HTPCBM_Reykjavik_Pristine',2009,-21.82895,64.117009)
@@ -500,7 +553,7 @@ if __name__ == '__main__':
 
     # run_dates_mp('P3HTPCBM_Rio',2007,-43.178719,-22.917613)
     # run_dates_mp('P3HTPCBM_Rio',2008,-43.178719,-22.917613)
-    run_dates_mp_pristine('P3HTPCBM_Rio_Pristine',2007,43.178719,-22.917613)
+    #run_dates_mp_pristine('P3HTPCBM_Rio_Pristine',2007,43.178719,-22.917613)
     # #run_dates_mp_pristine('P3HTPCBM_Rio_Pristine',2008,43.178719,-22.917613)
 
     # run_dates_mp('P3HTPCBM_Tokyo',2007,139.775831,35.667202)

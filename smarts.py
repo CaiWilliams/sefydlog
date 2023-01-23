@@ -1,9 +1,11 @@
 import os
+import shutil
 import subprocess
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 import time
+import secrets
 
 class input_file:
     def __init__(self,name = 'smarts295'):
@@ -11,7 +13,8 @@ class input_file:
         self.file_extension = '.inp.txt'
         #if os.getcwd() != 'SMARTS':
         #    os.chdir('SMARTS')
-        self.filename = os.path.join('SMARTS',name.lower() + self.file_extension)
+        self.hash = secrets.token_hex(nbytes=16)
+        self.filename = os.path.join('SMARTS_'+str(self.hash),name.lower() + self.file_extension)
 
     def add_comment(self, comment):
         self.comment = comment.text
@@ -141,6 +144,7 @@ class input_file:
         return self
 
     def save(self):
+        shutil.copytree('SMARTS','SMARTS_'+str(self.hash)) 
         self.order = [self.pressure, self.atmosphere, self.water_vapor, self.ozone, self.gas, self.carbon_dioxide, self.aerosol, self.turbidity, self.abledo, self.spectral_range, self.print, self.circumsolar, self.scan, self.illuminance, self.ultra_violet, self.mass]
         main_string = self.comment
         for item in self.order:
@@ -151,13 +155,13 @@ class input_file:
         return self
     
     def run(self):
-        os.chdir('SMARTS')
+        os.chdir('SMARTS_'+str(self.hash))
         os.system('./smarts295batch')
         os.chdir('..')
         return
-    
+
     def retrive(self):
-        data = pd.read_csv(os.path.join('SMARTS','smarts295.ext.txt'),delimiter=' ',index_col=False)
+        data = pd.read_csv(os.path.join('SMARTS_'+str(self.hash),'smarts295.ext.txt'),delimiter=' ',index_col=False)
         return data['Wvlgth'],data['Global_tilted_irradiance']
 
     def plot(self):
@@ -165,9 +169,10 @@ class input_file:
         plt.plot(data['Wvlgth'],data['Global_tilted_irradiance'])
 
     def delete(self):
-        os.remove(os.path.join('SMARTS','smarts295.ext.txt'))
-        os.remove(os.path.join('SMARTS','smarts295.inp.txt'))
-        os.remove(os.path.join('SMARTS','smarts295.out.txt'))
+        shutil.rmtree(os.path.join(os.getcwd(),'SMARTS_'+str(self.hash)))
+        #os.remove(os.path.join('SMARTS','smarts295.ext.txt'))
+        #os.remove(os.path.join('SMARTS','smarts295.inp.txt'))
+        #os.remove(os.path.join('SMARTS','smarts295.out.txt'))
 
 class comment:
     def __init__(self, text):
@@ -509,9 +514,9 @@ def spectrum(surface_pressure, altitude, site_temp, relative_humidity, season, a
         B.save()
         B.run()
         try:
-           wavelength, irradiance = B.retrive()
-           B.delete()
-           return wavelength, irradiance
+            wavelength, irradiance = B.retrive()
+            B.delete()
+            return wavelength, irradiance
         except:
            B.delete()
 
