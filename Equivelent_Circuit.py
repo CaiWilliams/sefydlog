@@ -195,7 +195,7 @@ class cell:
         return i_from_v(resistance_shunt=shunt_resistance,resistance_series=serise_resistance,nNsVth=nNsVth,voltage=v,saturation_current=self.dark_satuartion, photocurrent=self.photogenerated)
     
     def fit_func(self):
-        popt, pcov = curve_fit(self.func, self.jv[0], self.jv[1])
+        popt, pcov = curve_fit(self.func, self.jv[0], self.jv[1],maxfev=10000)
         self.shunt_resistance = popt[0]
         self.serise_resistance = popt[1]
         self.n = popt[2]
@@ -228,27 +228,29 @@ def run_equivilent_circuit(idx,temperature):
 
         
 if __name__ == '__main__':
-    pce = np.zeros(len(range(2900)))
-    for idx in tqdm.tqdm(range(2900)):
-        pce[idx],temp1,temp2,temp3,temp4 = run_equivilent_circuit(idx)
-    plt.plot(pce)
-    plt.show()
-
-    # Perc = cell()
-    # Perc.load_eqe('PERC')
-    # Perc.load_jv('PERC-1')
-    # Perc.calculate_resistance(slope_frac=0.5)
-    # Perc.load_dark_jv('PERC-1')
-    # Perc.calculate_local_ideality()
-    # Perc.load_sepectrum('AM1.5G',scaling=1)
-    # Perc.calculate_photogenerated()
-    # Perc.fit_func()
-    # Perc.equivilent_cuircuit_jv()
-    # Perc.calculate_power()
-    # plt.plot(Perc.jv_experiment[0],Perc.jv_experiment[1])
-    # plt.plot(Perc.jv[0],Perc.jv[1])
-    # print(Perc.Efficiency)
-    # #plt.xlim(left=0)
-    # plt.ylim(bottom=0,top=100)
+    # pce = np.zeros(len(range(2900)))
+    # for idx in tqdm.tqdm(range(2900)):
+    #     pce[idx],temp1,temp2,temp3,temp4 = run_equivilent_circuit(idx)
+    # plt.plot(pce)
     # plt.show()
+
+    Perc = cell()
+    Perc.load_eqe('PERC')
+    Perc.load_jv('PERC-1')
+    Perc.calculate_resistance(slope_frac=0.5)
+    Perc.load_dark_jv('PERC-1')
+    Perc.calculate_local_ideality()
+    Perc.load_sepectrum('AM1.5G',scaling=1)
+    Perc.calculate_photogenerated()
+    Perc.fit_func()
+    Perc.equivilent_cuircuit_jv()
+    Perc.calculate_power()
+    plt.plot(Perc.jv_experiment[0],Perc.jv_experiment[1])
+    plt.plot(Perc.jv[0],Perc.jv[1])
+    print(Perc.incoming_power)
+    print(Perc.Pmax)
+    print(Perc.Efficiency)
+    #plt.xlim(left=0)
+    plt.ylim(bottom=0,top=100)
+    plt.show()
 

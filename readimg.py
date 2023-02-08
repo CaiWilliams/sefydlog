@@ -1,19 +1,24 @@
+from smarts import *
+from GPVDM import *
+from Equivelent_Circuit import *
+from generate_pristine_concentrations import gas_concentrations
+
+
 from PIL import Image
 import numpy as np
 import os
 import matplotlib.pyplot as plt
 import datetime
-from smarts import * 
-import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
-import smarts
+
+
 from timezonefinder import TimezoneFinder
 import pytz
-from GPVDM import *
+
 import multiprocessing
 import tqdm
 import pandas as pd
-from Equivelent_Circuit import *
+import copy
+
 
 class Atmosphere():
     def __init__(self,year,month,day,hour):
@@ -90,7 +95,6 @@ class Atmosphere():
         self.relative_humidity = self.relative_humidity[self.arg_latitude,self.arg_longitude]
         gasses = [self.carbon_monoxide, self.sulfur_dioxide, self.nitric_acid, self.water_vapour, self.methane, self.TAU550, self.formaldehyde, self.air_temperature, self.nitrogen_dioxide, self.ozone, self.carbon_dioxide, self.surface_air_pressure, self.relative_humidity]
         return gasses
-
 
     def load_day(self):
         dir = os.path.join(os.getcwd(),str(self.year),str(self.month),str(self.day),str(self.hour))
@@ -206,6 +210,31 @@ class Atmosphere():
             intensity = 0
         return wavelength, intensity
 
+    def generate_spectrum_one_at_a_time(latitude, longitude, date, data):
+        tf = TimezoneFinder()
+        lat = latitude
+        long = longitude
+        timezone = tf.timezone_at(lat=lat,lng=long)
+        timezone = datetime.datetime.now(pytz.timezone(str(timezone)))
+        timezone = timezone.utcoffset().total_seconds()/60/60
+        carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data
+
+        if latitude < 0:
+            if date.month <= 3 or date.month >= 9:
+                season = 'SUMMER'
+            else:
+                season = 'WINTER'
+        else:
+            if date.month <= 3 or date.month >= 9:
+                season = 'WINTER'
+            else:
+                season = 'SUMMER'
+        try:
+            wavelength,intensity = spectrum_refrence_ozone(surface_air_pressure/100,0,air_temperature,relative_humidity,season,air_temperature,formaldehyde,methane,carbon_monoxide,nitric_acid,nitrogen_dioxide,oz,sulfur_dioxide,carbon_di,'S&F_RURAL',TAU550,water_vapour,date.year,date.month,date.day,date.hour,latitude,longitude,timezone) 
+        except:
+            wavelength = 0 
+            intensity = 0
+        return wavelength, intensity
 
 def plot():
     start_date =  datetime.datetime(2019,1,1,12)
@@ -256,6 +285,32 @@ def fetch_wavlength_intensity(data):
     data = data[4]
     #lock.acquire()
     wavelength, intensity = Atmosphere.generate_spectrum_standalone(latitude,longitude,date,data)
+    os.system('clear')
+    #lock.release()
+    try:
+        wavelength = wavelength*1e-9
+        intensity = intensity*1e-9
+    except:
+        wavelength = 0
+        intensity = 0
+    df = pd.DataFrame()
+    df['Wavelength'] = wavelength
+    df['Intensity'] = intensity
+    #header = 'Wavelength\tIntensity'
+    dir = os.path.join(os.getcwd(),'Temp','Spectrums','temp'+str(idx)+'.csv')
+    df.to_csv(dir)
+    #np.savetxt(dir, data, delimiter='\t',header=header)
+    return
+
+def fetch_wavlength_intensity_pristine(data):
+    longitude = data[0]
+    latitude = data[1]
+    idx = data[2]
+    date = data[3]
+    data = data[4]
+    #lock.acquire()
+    wavelength, intensity = Atmosphere.generate_spectrum_pristine_standalone(latitude,longitude,date,data)
+    os.system('clear')
     #lock.release()
     try:
         wavelength = wavelength*1e-9
@@ -271,6 +326,32 @@ def fetch_wavlength_intensity(data):
     df.to_csv(dir)
     #np.savetxt(dir, data, delimiter='\t',header=header)
     return 
+
+def fetch_wavlength_intensity_one_at_a_time(data):
+    longitude = data[0]
+    latitude = data[1]
+    idx = data[2]
+    date = data[3]
+    data = data[4]
+    #lock.acquire()
+    wavelength, intensity = Atmosphere.generate_spectrum_one_at_a_time(latitude,longitude,date,data)
+    os.system('clear')
+    #lock.release()
+    try:
+        wavelength = wavelength*1e-9
+        intensity = intensity*1e-9
+    except:
+        wavelength = 0
+        intensity = 0
+    df = pd.DataFrame()
+    df['Wavelength'] = wavelength
+    df['Intensity'] = intensity
+    #header = 'Wavelength\tIntensity'
+    dir = os.path.join(os.getcwd(),'Temp','Spectrums','temp'+str(idx)+'.csv')
+    df.to_csv(dir)
+    #np.savetxt(dir, data, delimiter='\t',header=header)
+    return 
+
 
 def save_to_oghma_mp(data):
     longitude = data[0]
@@ -370,30 +451,174 @@ def run_dates():
 def task(longitude,latitude,date):
         return Atmosphere(date.year,date.month,date.day,date.hour).get_location(longitude, latitude)
 
+def load_loc(data):
+    arg_longitude = data[0]
+    arg_latitude = data[1]
+    date = data[2]
+    dir = os.path.join(os.getcwd(),str(date.year),str(date.month),str(date.day),str(date.hour))
+    files = os.listdir(dir)
+    mins = [float(file.split('_')[-1][3:-4]) for file in files]
+    maxs = [float(file.split('_')[-2][3:]) for file in files]
+    files_path = [os.path.join(dir,file) for file in files]
+    data = [Atmosphere.load_image(path) for path in files_path]
+    data = [d[:,:,0]/255 * 3 for d in data]
+    data = [d *(maxs[idx]-mins[idx]) + mins[idx] for idx,d in enumerate(data)]
+    names = [file.split('_')[-len(file.split('_')):-2] for file in files]
+    names = ['_'.join(name) for name in names]
+    for idx in range(len(data)):
+            match names[idx]:
+                case 'carbon_monoxide':#
+                    carbon_monoxide = data[idx][arg_latitude,arg_longitude]
+                case 'sulfur_dioxide':#
+                    sulfur_dioxide = data[idx][arg_latitude,arg_longitude]
+                case 'two_m_temperature':
+                    two_m_temperature = data[idx][arg_latitude,arg_longitude]
+                case 'nitric_acid':#
+                    nitric_acid = data[idx][arg_latitude,arg_longitude]
+                case 'water_vapour':#
+                    water_vapour = data[idx][arg_latitude,arg_longitude]
+                case 'methane':#
+                    methane = data[idx][arg_latitude,arg_longitude]
+                case 'TAU550':#
+                    TAU550 = data[idx][arg_latitude,arg_longitude]
+                case 'formaldehyde':#
+                    formaldehyde = data[idx][arg_latitude,arg_longitude]
+                case 'air_temperature':#
+                    air_temperature = data[idx][arg_latitude,arg_longitude]
+                case 'nitrogen_dioxide':#
+                    nitrogen_dioxide = data[idx][arg_latitude,arg_longitude]
+                case 'ozone':#
+                    ozone = data[idx][arg_latitude,arg_longitude]
+                case 'carbon_dioxide':
+                    carbon_dioxide = data[idx][arg_latitude,arg_longitude]
+                case 'surface_air_pressure':#
+                    surface_air_pressure = data[idx][arg_latitude,arg_longitude]
+                case 'relative_humidity':#
+                    relative_humidity = data[idx][arg_latitude,arg_longitude]
+    gasses = [carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, ozone, carbon_dioxide, surface_air_pressure, relative_humidity]
+    return gasses
 
 
-def run_dates_mp_SDM(name,year,longitude,latitude):
-    start_date =  datetime.datetime(year,1,1,12)
-    end_date = datetime.datetime(year,12,31,21)
+def arg_lat_lon(longitude,latitude):
+    data = pd.read_csv(os.path.join(os.getcwd(),'Location Lists','latlons.csv'))
+    latitudes = data['latitudes'].dropna(axis=0).to_numpy()
+    longitudes = data['longitudes'].to_numpy()
+    longitudes = (longitudes + 180) % 360 - 180
+    arg_latitude = np.argmin(np.abs(latitude - latitudes))
+    arg_longitude = np.argmin(np.abs(longitude - longitudes))
+    return arg_longitude, arg_latitude
+
+def write(data):
+    idx = data[2]
+    date = data[3]
+    data_list = data[4]
+    carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data_list
+    pce,pmax,ff,voc,jsc = run_equivilent_circuit(idx,air_temperature+273.15)
+    return [date,pce,pmax,ff,voc,jsc,air_temperature,carbon_di,carbon_monoxide,formaldehyde,methane,nitric_acid,nitrogen_dioxide,oz,relative_humidity,sulfur_dioxide,surface_air_pressure,TAU550,water_vapour]
+
+def run_dates_mp_SDM_pristine(name,start_year,end_year,longitude,latitude):
+    arg_longitude, arg_latitude = arg_lat_lon(longitude,latitude)
+    start_date =  datetime.datetime(start_year,1,1,0)
+    end_date = datetime.datetime(end_year,12,31,21)
     dates = pd.date_range(start=start_date, end=end_date,freq='3H').to_pydatetime().tolist()
-    results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
-    #data_list = []
-    #for date in tqdm.tqdm(dates):
-    #    data_list.append(task(longitude,latitude,date))
+    dates_it = [[arg_longitude,arg_latitude,date] for date in dates]
+    #results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
+    data_list = []
+    pool = multiprocessing.Pool(processes=100)
+    data_list = pool.map(load_loc,dates_it)
 
-    data_list = [Atmosphere(date.year,date.month,date.day,date.hour).get_location(longitude, latitude) for date in tqdm.tqdm(dates)]
     data = [[longitude,latitude,idx,date,data_list[idx]] for idx,date in enumerate(dates)]
-    pool = multiprocessing.Pool(processes=128)
-    for _ in tqdm.tqdm(pool.imap(fetch_wavlength_intensity,data), total=len(data)):
+
+    for _ in tqdm.tqdm(pool.imap_unordered(fetch_wavlength_intensity_pristine,data), total=len(data)):
      pass
     
+    resutls_r = []
+    results_r = pool.map(write,data)
+    results = pd.DataFrame(data=results_r,columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
+    results.to_csv(os.path.join(os.getcwd(),'Results',name+'.csv'))
+    return
 
-    for idx,date in enumerate(tqdm.tqdm(dates)):
+def run_dates_mp_SDM(name,start_year,end_year,longitude,latitude):
+    arg_longitude, arg_latitude = arg_lat_lon(longitude,latitude)
+    start_date =  datetime.datetime(start_year,1,1,0)
+    end_date = datetime.datetime(end_year,12,31,21)
+    dates = pd.date_range(start=start_date, end=end_date,freq='3H').to_pydatetime().tolist()
+    dates_it = [[arg_longitude,arg_latitude,date] for date in dates]
+    #results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
+    data_list = []
+    pool = multiprocessing.Pool(processes=100)
+    data_list = pool.map(load_loc,dates_it)
 
-        carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data_list[idx]
-        pce,pmax,ff,voc,jsc = run_equivilent_circuit(idx,air_temperature+273.15)
-        results.loc[idx] = [date,pce,pmax,ff,voc,jsc,air_temperature,carbon_di,carbon_monoxide,formaldehyde,methane,nitric_acid,nitrogen_dioxide,oz,relative_humidity,sulfur_dioxide,surface_air_pressure,TAU550,water_vapour]
-    results.to_csv(os.path.join(os.getcwd(),'Results',name+'_'+str(year)+'.csv'))
+    data = [[longitude,latitude,idx,date,data_list[idx]] for idx,date in enumerate(dates)]
+
+    for _ in tqdm.tqdm(pool.imap_unordered(fetch_wavlength_intensity,data), total=len(data)):
+     pass
+    
+    resutls_r = []
+    results_r = pool.map(write,data)
+    results = pd.DataFrame(data=results_r,columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
+    results.to_csv(os.path.join(os.getcwd(),'Results',name+'.csv'))
+    return
+
+
+def run_dates_mp_SDM_one_at_a_time(name,start_year,end_year,longitude,latitude):
+    arg_longitude, arg_latitude = arg_lat_lon(longitude,latitude)
+    start_date =  datetime.datetime(start_year,1,1,0)
+    end_date = datetime.datetime(end_year,12,31,21)
+    dates = pd.date_range(start=start_date, end=end_date,freq='3H').to_pydatetime().tolist()
+    dates_it = [[arg_longitude,arg_latitude,date] for date in dates]
+    #results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
+    data_list = []
+    pool = multiprocessing.Pool(processes=100)
+    data_list = np.asarray(pool.map(load_loc,dates_it))
+
+    press = np.asarray([data_list[i][11]/100 for i in range(0,len(data_list))])
+    temps = np.asarray([data_list[i][7] for i in range(0,len(data_list))])
+    water = np.asarray([data_list[i][3] for i in range(0,len(data_list))])
+    rh = np.asarray([data_list[i][12] for i in range(0,len(data_list))])
+    gas = gas_concentrations(press,temps,'pristine').T
+    temp_pristine = []
+    for i in range(np.shape(data_list)[0]):
+        print(i)
+        print(data_list[i,12])
+        temp_pristine.append([gas[i,2],gas[i,8],gas[i,4],0,gas[i,1],0,gas[i,0],temps[i],gas[i,6],0,280,press[i],rh[i]])
+    #temp_pristine = [[gas[i,2],gas[i,8],gas[8,4],data_list[3][i],gas[i,1],0,gas[i,0],data_list[i][7],gas[i,6],0,280,data_list[11][i],data_list[12][i]] for i in range(np.shape(data_list)[0])]
+    for i in range(0,len(data_list[0])):
+
+        #gas = gas_concentrations(pres,np.asarray(data_list[:][7]),'pristine')
+        #print(np.shape(gas))
+        #set_zero = np.arange(len(data_list[0]))
+        #set_zero = np.delete(set_zero,[3,7,11,12,i])
+
+        #pristine = np.asarray([gas[2],gas[8],gas[4],0,gas[1],0,gas[0],0,gas[6],0,280,0,0])
+
+        #CH2O,CH4,CO,NH02,NH03,NO,NO2,NO3,SO2
+        #carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity
+        #temp_pristine = [[gas[i][2],gas[i][8],gas[i][4],data_list[i][3],gas[i][1],0,gas[i][0],data_list[i][7],gas[i][6],0,280,data_list[i][11],data_list[i][12]] for i in range(0,len(data_list))]
+
+        #pristine = np.asarray([0.19,1e-3,60e-6,0,1.5,0,0,293,1e-3,0.04,280,10000,50])
+        temp_data_list = np.zeros(np.shape(data_list))
+        temp_data_list = copy.deepcopy(temp_pristine)
+        #print(data_list[:][i])
+        temp_data_list[:][i] = data_list[:][i]
+        #print(np.shape(temp_data_list[:][0]))
+        #plt.plot(temp_data_list[:][0])
+        # #print(temp_data_list)
+        #if i != 10:
+        #    temp_data_list[:,10] = 280
+
+        data = [[longitude,latitude,idx,date,temp_data_list[idx]] for idx,date in enumerate(dates)]
+        #print(temp_data_list[0])
+        for _ in tqdm.tqdm(pool.imap_unordered(fetch_wavlength_intensity_one_at_a_time,data), total=len(data)):
+           pass
+        
+        n = ['carbon_monoxide', 'sulfur_dioxide', 'nitric_acid', 'water_vapour', 'methane', 'TAU550', 'formaldehyde', 'air_temperature', 'nitrogen_dioxide', 'ozone', 'carbon_dioxide', 'surface_air_pressure','relative_humidity']
+        resutls_r = []
+        results_r = pool.map(write,data)
+        results = pd.DataFrame(data=results_r,columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
+        results.to_csv(os.path.join(os.getcwd(),'Results',name+'_'+n[i])+'.csv')
+        #print(temp_data_list[0])
+    return
 
 def run_dates_mp(name,year,longitude,latitude):
     start_date =  datetime.datetime(year,1,1,12)
@@ -456,96 +681,86 @@ def run_dates_mp_pristine(name,year,longitude,latitude):
         results.loc[idx] = [date,PCE,Pmax,FF,Voc,Jsc,air_temperature,carbon_di,carbon_monoxide,formaldehyde,methane,nitric_acid,nitrogen_dioxide,oz,relative_humidity,sulfur_dioxide,surface_air_pressure,tau550,water_vapour]
     results.to_csv(os.path.join(os.getcwd(),'Results',name+'_'+str(year)+'.csv'))
 
+def arleady_exists(f):
+    return os.path.exists(os.path.join(os.getcwd(),'Results',f+'.csv'))
+
 if __name__ == '__main__':
-    global lock
-    lock = multiprocessing.Lock()
+    #global lock
+    #lock = multiprocessing.Lock()
+    locs = pd.read_csv(os.path.join(os.getcwd(),'Location Lists','BritishIsles.csv'))
+    years = np.arange(2003,2021)
+    rpbar = tqdm.tqdm(total=len(years)*len(locs)*13,mininterval=0)
+    for year in years:
+        for i in range(len(locs)):
+            name = locs.loc[i]['Name']
+            state = locs.loc[i]['State']
+            lat = float(locs.loc[i]['Latitude'])
+            lon = float(locs.loc[i]['Longitude'])
+            f = 'PERC_' + str(name) + '_' + str(state) + '_' + str(year)
+            fp = 'PERC_' + str(name) + '_' + str(state) + '_pristine_' + str(year)
+            file_status = arleady_exists(f)
+            time.sleep(0.01)
+            #print(f)
+            #print(os.path.join(os.getcwd(),'Results',f+'.csv'))
+            #print(file_status)
+            #if file_status == False:
+            run_dates_mp_SDM_one_at_a_time(f,year,year,lon,lat)
+            rpbar.update(1)
+                #run_dates_mp_SDM_pristine(fp,year,year,lon,lat)
+                #rpbar.update(1)
+            #else:
+            #    rpbar.update(1)
+            #    rpbar.update(1)
+        #run_dates_mp_SDM_one_at_a_time('PERC_Caracas_Venezuela_'+str(year),year,year,-66.9036,10.4806)
+        # run_dates_mp_SDM('PERC_Maracaibo_Venezuela_'+str(year),year,year,-71.6125,10.6427)
+        # run_dates_mp_SDM('PERC_Valencia_Venezuela_'+str(year),year,year,-67.9927,10.1579)
+        # run_dates_mp_SDM_pristine('PERC_Caracas_Venezuela_pristine'+str(year),year,year,-66.9036,10.4806)
+        # run_dates_mp_SDM_pristine('PERC_Maracaibo_Venezuela_pristine'+str(year),year,year,-71.6125,10.6427)
+        # run_dates_mp_SDM_pristine('PERC_Valencia_Venezuela_pristine'+str(year),year,year,-67.9927,10.1579)
+        # run_dates_mp_SDM('PERC_Mexico_City_'+str(year),year,year,-99.129631,19.422804)
+        # run_dates_mp_SDM('PERC_Zhengzhou_'+str(year),year,year,113.686424,34.756545)
+        # run_dates_mp_SDM('PERC_Lahore_'+str(year),year,year,74.370776,31.519601)
+        # run_dates_mp_SDM('PERC_Durham_'+str(year),year,year,-1.5687486,54.767273)
+        # run_dates_mp_SDM('PERC_San_Juan_'+str(year),year,year,-66.123175,18.371388)
 
-    #Covid
+        # run_dates_mp_SDM_pristine('PERC_Mexico_City_pristine_'+str(year),year,year,-99.129631,19.422804)
+        # run_dates_mp_SDM_pristine('PERC_Zhengzhou_pristine_'+str(year),year,year,113.686424,34.756545)
+        # run_dates_mp_SDM_pristine('PERC_Lahore_pristine_'+str(year),year,year,74.370776,31.519601)
+        # run_dates_mp_SDM_pristine('PERC_Durham_pristine_'+str(year),year,year,-1.5687486,54.767273)
+        # run_dates_mp_SDM_pristine('PERC_San_Juan_pristine_'+str(year),year,year,-66.123175,18.371388)
 
-    # run_dates_mp('P3HTPCBM_Mexico_City',2019,-99.129631,19.422804)
-    # #run_dates_mp_pristine('P3HTPCBM_Mexico_City_Pristine',2019,-99.129631,19.422804)
+        # run_dates_mp_SDM('PERC_Santa_Clarita_'+str(year),year,year,-118.534802,34.387461)
+        # run_dates_mp_SDM('PERC_Malibu_'+str(year),year,year,-118.785394,34.029256)
+        # run_dates_mp_SDM('PERC_Santa_Rosa_'+str(year),year,year,-122.772402,38.491299)
 
-    # run_dates_mp('P3HTPCBM_Zhengzhou',2019,113.686424,34.756545)
-    # #run_dates_mp_pristine('P3HTPCBM_Zhengzhou_Pristine',2019,113.686424,34.756545)
+        # run_dates_mp_SDM_pristine('PERC_Santa_Clarita_pristine_'+str(year),year,year,-118.534802,34.387461)
+        # run_dates_mp_SDM_pristine('PERC_Malibu_pristine_'+str(year),year,year,-118.785394,34.029256)
+        # run_dates_mp_SDM_pristine('PERC_Santa_Rosa_pristine_'+str(year),year,year,-122.772402,38.491299)
 
-    # run_dates_mp('P3HTPCBM_Lahore',2019,74.370776,31.519601)
-    # #run_dates_mp_pristine('P3HTPCBM_Lahore_Pristine',2019,74.370776,31.519601)
+        # run_dates_mp_SDM('PERC_Montreal_'+str(year),year,year,-73.560738,45.493144)
+        # run_dates_mp_SDM('PERC_Reykjavik_'+str(year),year,year,-21.82895,64.117009)
 
-    # run_dates_mp('P3HTPCBM_Durham',2019,-1.5687486,54.767273)
-    # #run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2019,-1.5687486,54.767273)
+        # run_dates_mp_SDM_pristine('PERC_Montreal_pristine_'+str(year),year,year,-73.560738,45.493144)
+        # run_dates_mp_SDM_pristine('PERC_Reykjavik_pristine_'+str(year),year,year,-21.82895,64.117009)
 
-    # run_dates_mp('P3HTPCBM_San_Juan',2019,-66.123175,18.371388)
-    # #run_dates_mp_pristine('P3HTPCBM_San_Juan_Pristine',2019,-66.123175,18.371388)
+        # run_dates_mp_SDM('PERC_Beijing_'+str(year),year,year,116.533129,39.9154649)
+        # run_dates_mp_SDM('PERC_Guangzhou_'+str(year),year,year,113.288508,23.106849)
+        # run_dates_mp_SDM('PERC_Chengdu_'+str(year),year,year,104.168877,30.636373)
+        # run_dates_mp_SDM('PERC_London_'+str(year),year,year,-0.010573,51.542710)
+        # run_dates_mp_SDM('PERC_Rio_'+str(year),year,year,-43.178719,-22.917613)
+        # run_dates_mp_SDM('PERC_Tokyo_'+str(year),year,year,139.775831,35.667202)
 
-    # run_dates_mp('P3HTPCBM_Mexico_City',2020,-99.129631,19.422804)
-    # #run_dates_mp_pristine('P3HTPCBM_Mexico_City_Pristine',2020,-99.129631,19.422804)
-
-    # run_dates_mp('P3HTPCBM_Zhengzhou',2020,113.686424,34.756545)
-    # #run_dates_mp_pristine('P3HTPCBM_Zhengzhou_Pristine',2020,113.686424,34.756545)
-
-    # run_dates_mp('P3HTPCBM_Lahore',2020,74.370776,31.519601)
-    # #run_dates_mp_pristine('P3HTPCBM_Lahore_Pristine',2020,74.370776,31.519601)
-
-    # run_dates_mp('P3HTPCBM_Durham',2020,-1.5687486,54.767273)
-    # #run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2020,-1.5687486,54.767273)
-
-    # run_dates_mp('P3HTPCBM_San_Juan',2020,-66.123175,18.371388)
-    # #run_dates_mp_pristine('P3HTPCBM_San_Juan_Pristine',2020,-66.123175,18.371388)
-
-    # #Wild Fires
-
-    # run_dates_mp('P3HTPCBM_Santa_Clarita',2020,-118.534802,34.387461)
-    # #run_dates_mp_pristine('P3HTPCBM_Santa_Clarita_Pristine',2020,-118.534802,34.387461)
-
-    # run_dates_mp('P3HTPCBM_Santa_Clarita',2019,-118.534802,34.387461)
-    # #run_dates_mp_pristine('P3HTPCBM_Santa_Clarita_Pristine',2019,-118.534802,34.387461)
-
-    # run_dates_mp('P3HTPCBM_Malibu',2020,-118.785394,34.029256)
-    # #run_dates_mp_pristine('P3HTPCBM_Malibu_Pristine',2020,-118.785394,34.029256)
-
-    # run_dates_mp('P3HTPCBM_Malibu',2019,-118.785394,34.029256)
-    # #run_dates_mp_pristine('P3HTPCBM_Malibu_Pristine',2019,-118.785394,34.029256)
-
-    # run_dates_mp('P3HTPCBM_Santa_Rosa',2020,-122.772402,38.491299)
-    # # #run_dates_mp_pristine('P3HTPCBM_Santa_Rosa_Pristine',2020,-122.772402,38.491299)
-
-    # run_dates_mp('P3HTPCBM_Santa_Rosa',2019,-122.772402,38.491299)
-    # #run_dates_mp_pristine('P3HTPCBM_Santa_Rosa_Pristine',2019,-122.772402,38.491299)
-
-    # #Volcano
-
-    # run_dates_mp('P3HTPCBM_Durham',2009,-1.5687486,54.767273)
-    # run_dates_mp('P3HTPCBM_Durham',2010,-1.5687486,54.767273)
-    # #run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2010,-1.5687486,54.767273)
-    #run_dates_mp_pristine('P3HTPCBM_Durham_Pristine',2009,-1.5687486,54.767273)
-
-    # run_dates_mp('P3HTPCBM_Montreal',2009,-73.560738,45.493144)
-    # run_dates_mp('P3HTPCBM_Montreal',2010,-73.560738,45.493144)
-    # #run_dates_mp_pristine('P3HTPCBM_Montreal_Pristine',2010,-73.560738,45.493144)
-    #run_dates_mp_pristine('P3HTPCBM_Montreal_Pristine',2009,-73.560738,45.493144)
-
-    run_dates_mp_SDM('P3HTPCBM_Reykjavik_SDM',2009,-21.82895,64.117009)
-    # run_dates_mp('P3HTPCBM_Reykjavik',2010,-21.82895,64.117009)
-    # #run_dates_mp_pristine('P3HTPCBM_Reykjavik_Pristine',2010,-21.82895,64.117009)
-    #run_dates_mp_pristine('P3HTPCBM_Reykjavik_Pristine',2009,-21.82895,64.117009)
+        # run_dates_mp_SDM_pristine('PERC_Beijing_pristine_'+str(year),year,year,116.533129,39.9154649)
+        # run_dates_mp_SDM_pristine('PERC_Guangzhou_pristine_'+str(year),year,year,113.288508,23.106849)
+        # run_dates_mp_SDM_pristine('PERC_Chengdu_pristine_'+str(year),year,year,104.168877,30.636373)
+        # run_dates_mp_SDM_pristine('PERC_London_pristine_'+str(year),year,year,-0.010573,51.542710)
+        # run_dates_mp_SDM_pristine('PERC_Rio_pristine_'+str(year),year,year,-43.178719,-22.917613)
+        # run_dates_mp_SDM_pristine('PERC_Tokyo_pristine_'+str(year),year,year,139.775831,35.667202)
 
     # #Olympics
 
-    # run_dates_mp('P3HTPCBM_Beijing',2007,116.533129,39.9154649)
-    # run_dates_mp('P3HTPCBM_Beijing',2008,116.533129,39.9154649)
-    # run_dates_mp_pristine('P3HTPCBM_Beijing_Pristine',2007,116.533129,39.9154649)
-    # #run_dates_mp_pristine('P3HTPCBM_Beijing_Pristine',2008,116.533129,39.9154649)
-
-    # run_dates_mp('P3HTPCBM_Guangzhou',2007,113.288508,23.106849)
-    # run_dates_mp('P3HTPCBM_Guangzhou',2008,113.288508,23.106849)
-    # run_dates_mp_pristine('P3HTPCBM_Guangzhou_Pristine',2007,113.288508,23.106849)
-    # #run_dates_mp_pristine('P3HTPCBM_Guangzhou_Pristine',2008,113.288508,23.106849)
-
-    # run_dates_mp('P3HTPCBM_Chengdu',2007,104.168877,30.636373)
-    # run_dates_mp('P3HTPCBM_Chengdu',2008,104.168877,30.636373)
-    # run_dates_mp_pristine('P3HTPCBM_Chengdu_Pristine',2007,104.168877,30.636373)
-    # #run_dates_mp_pristine('P3HTPCBM_Chengdu_Pristine',2008,104.168877,30.636373)
-
+    # run_dates_mp('P3HTPCBM_Beijing',2007,116.533129,39.9154649)        if i != 10:
+    #        temp_data_list[:,10] = 280
     # run_dates_mp('P3HTPCBM_London',2007,-0.010573,51.542710)
     # run_dates_mp('P3HTPCBM_London',2008,-0.010573,51.542710)
     # run_dates_mp_pristine('P3HTPCBM_London_Pristine',2007,-0.010573,51.542710)
