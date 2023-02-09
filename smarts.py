@@ -443,12 +443,12 @@ def spectrum_pristine(surface_pressure, altitude, site_temp, relative_humidity, 
     
     B.save()
     B.run()
-    #try:
-    wavelength, irradiance = B.retrive()
-    #    B.delete()
-    return wavelength, irradiance
-    #except:
-    #    B.delete()
+    try:
+        wavelength, irradiance = B.retrive()
+        B.delete()
+        return wavelength, irradiance
+    except:
+        B.delete()
 
 def spectrum_refrence_ozone(surface_pressure, altitude, site_temp, relative_humidity, season, average_daily_temperature, formaldehyde, methane, carbon_monoxide, nitric_acid, nitrogen_dioxide, ozone3, sulfur_dioxide, carbon_dioxide_ab, aerosol_model, TAU550, water_vapour, year, month, day, hour, latitude, longitude, timezone):
         A = comment('')
@@ -522,7 +522,7 @@ def spectrum_refrence_ozone(surface_pressure, altitude, site_temp, relative_humi
             B.delete()
             return wavelength, irradiance
         except:
-           B.delete()
+            B.delete()
 
 def spectrum(surface_pressure, altitude, site_temp, relative_humidity, season, average_daily_temperature, formaldehyde, methane, carbon_monoxide, nitric_acid, nitrogen_dioxide, ozone3, sulfur_dioxide, carbon_dioxide_ab, aerosol_model, TAU550, water_vapour, year, month, day, hour, latitude, longitude, timezone):
         A = comment('')
@@ -595,7 +595,7 @@ def spectrum(surface_pressure, altitude, site_temp, relative_humidity, season, a
             B.delete()
             return wavelength, irradiance
         except:
-           B.delete()
+            B.delete()
 
 if __name__ == '__main__':
     X = np.linspace(0,100,10)
