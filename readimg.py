@@ -230,7 +230,6 @@ class Atmosphere():
             else:
                 season = 'SUMMER'
         try:
-            print(air_temperature)
             wavelength,intensity = spectrum_refrence_ozone(surface_air_pressure/100,0,air_temperature,relative_humidity,season,air_temperature,formaldehyde,methane,carbon_monoxide,nitric_acid,nitrogen_dioxide,oz,sulfur_dioxide,carbon_di,'S&F_RURAL',TAU550,water_vapour,date.year,date.month,date.day,date.hour,latitude,longitude,timezone)
         except:
             wavelength = 0 
@@ -286,7 +285,7 @@ def fetch_wavlength_intensity(data):
     data = data[4]
     #lock.acquire()
     wavelength, intensity = Atmosphere.generate_spectrum_standalone(latitude,longitude,date,data)
-    #os.system('clear')
+    os.system('clear')
     #lock.release()
     try:
         wavelength = wavelength*1e-9
@@ -312,7 +311,7 @@ def fetch_wavlength_intensity_pristine(data):
     data = data[4]
     #lock.acquire()
     wavelength, intensity = Atmosphere.generate_spectrum_pristine_standalone(latitude,longitude,date,data)
-    #os.system('clear')
+    os.system('clear')
     #lock.release()
     try:
         wavelength = wavelength*1e-9
@@ -560,8 +559,6 @@ def run_dates_mp_SDM(name,start_year,end_year,longitude,latitude):
     power = pool.map(fetch_wavlength_intensity,data)
     for idx, i in enumerate(power):
         data[idx].append(i)
-    print(data)
-    print(np.shape(data))
     resutls_r = []
     results_r = pool.map(write,data)
     results = pd.DataFrame(data=results_r,columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour','Power'])
@@ -695,28 +692,30 @@ def arleady_exists(f):
 if __name__ == '__main__':
     #global lock
     #lock = multiprocessing.Lock()
-    locs = pd.read_csv(os.path.join(os.getcwd(),'Location Lists','Set.csv'))
-    years = np.arange(2003,2021)
-    rpbar = tqdm.tqdm(total=len(years)*len(locs)*2,mininterval=0)
-    for year in years:
-        for i in range(len(locs)):
-            name = locs.loc[i]['Name']
-            state = locs.loc[i]['State']
-            lat = float(locs.loc[i]['Latitude'])
-            lon = float(locs.loc[i]['Longitude'])
-            f = 'PERC_' + str(name) + '_' + str(state) + '_' + str(year)
-            fp = 'PERC_' + str(name) + '_' + str(state) + '_pristine_' + str(year)
-            file_status_f = arleady_exists(f)
-            file_status_fp = arleady_exists(fp)
-            #print(f)
-            #print(os.path.join(os.getcwd(),'Results',f+'.csv'))
-            #print(file_status)
-            if file_status_f == False:
-                run_dates_mp_SDM(f,year,year,lon,lat)
-                rpbar.update(1)
-            elif file_status_fp == False:
-                run_dates_mp_SDM_pristine(fp,year,year,lon,lat)
-                rpbar.update(1)
-            else:
-                rpbar.update(1)
-                rpbar.update(1)
+    files = ['Set.csv','Caribbean.csv','China.csv','Australia.csv']
+    for file in files:
+        locs = pd.read_csv(os.path.join(os.getcwd(),'Location Lists',file))
+        years = np.arange(2003,2021)
+        rpbar = tqdm.tqdm(total=len(years)*len(locs)*2,mininterval=0)
+        for year in years:
+            for i in range(len(locs)):
+                name = locs.loc[i]['Name']
+                state = locs.loc[i]['State']
+                lat = float(locs.loc[i]['Latitude'])
+                lon = float(locs.loc[i]['Longitude'])
+                f = 'PERC_' + str(name) + '_' + str(state) + '_' + str(year)
+                fp = 'PERC_' + str(name) + '_' + str(state) + '_pristine_' + str(year)
+                file_status_f = arleady_exists(f)
+                file_status_fp = arleady_exists(fp)
+
+                if file_status_f == False:
+                    run_dates_mp_SDM(f,year,year,lon,lat)
+                    rpbar.update(1)
+                else:
+                    rpbar.update(1)
+
+                if file_status_fp == False:
+                    run_dates_mp_SDM_pristine(fp,year,year,lon,lat)
+                    rpbar.update(1)
+                else:
+                    rpbar.update(1)

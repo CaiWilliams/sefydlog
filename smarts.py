@@ -387,7 +387,6 @@ def spectrum_pristine(surface_pressure, altitude, site_temp, relative_humidity, 
     A = pressure(1, surface_pressure=surface_pressure, altitude=altitude,height=0)
     B = B.add_pressure(A)
 
-    print(site_temp)
     A = atmosphere(0,atmospheric_site_temp=site_temp, relative_humidity=relative_humidity,season=season, average_daily_temp=average_daily_temperature)
     B = B.add_atmosphere(A)
 

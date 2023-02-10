@@ -1,32 +1,34 @@
+import os.path
+
 import pandas as pd
 import numpy as np
 import itertools  
 import secrets     
 
-data = pd.read_csv('latlons.csv')
-latitudes = data['latitudes'].dropna(axis=0).to_numpy()
-longitudes = data['longitudes'].to_numpy()
-longitudes = (longitudes + 180) % 360 - 180
+def generate(lat_min,lat_max,lon_min,lon_max,name):
+    data = pd.read_csv(os.path.join(os.path.dirname(os.getcwd()),'Location Lists','latlons.csv'))
+    latitudes = data['latitudes'].dropna(axis=0).to_numpy()
+    longitudes = data['longitudes'].to_numpy()
+    longitudes = (longitudes + 180) % 360 - 180
 
-num_lat = np.where((latitudes > 46.75) & (latitudes <= 61),latitudes,np.nan)
-num_lat = num_lat[~np.isnan(num_lat)]
+    num_lat = np.where((latitudes > lat_min) & (latitudes <= lat_max),latitudes,np.nan)
+    num_lat = num_lat[~np.isnan(num_lat)]
 
-num_lon = np.where((longitudes > -11) & (longitudes  <= 3.5),longitudes,np.nan)
-num_lon = num_lon[~np.isnan(num_lon)]
+    num_lon = np.where((longitudes > lon_min) & (longitudes  <= lon_max),longitudes,np.nan)
+    num_lon = num_lon[~np.isnan(num_lon)]
 
-print(len(num_lat)*len(num_lon))
+    lat_lons = np.asarray(list(itertools.product(num_lat,num_lon)))
+    lats = lat_lons[:,0]
+    lons = lat_lons[:,1]
+    names = [str(secrets.token_hex(8)) for x in range(len(lats))]
 
-lat_lons = np.asarray(list(itertools.product(num_lat,num_lon)))
-lats = lat_lons[:,0][::2]
-lons = lat_lons[:,1][::2]
-print(lats)
-print(lons)
-names = [str(secrets.token_hex(8)) for x in range(len(lats))]
+    data = pd.DataFrame(index=None)
+    data['Name'] = names
+    data['State'] = str(name)
+    data['Latitude'] = lats
+    data['Longitude'] = lons
 
-data = pd.DataFrame(index=None)
-data['Name'] = names
-data['State'] = 'BritishIsles'
-data['Latitude'] = lats
-data['Longitude'] = lons
+    data.to_csv(str(name)+'.csv', index=False)
+    return
 
-#data.to_csv('BritishIsles.csv', index=False)
+generate(17,24,-86,-60,'Caribbean')
