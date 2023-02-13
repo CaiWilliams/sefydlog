@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import os
 import datetime as dt
+from math import cos, asin, sqrt
 
 def fetch_df(name):
     file = os.path.join(os.path.dirname(os.getcwd()),'Results_errors',name+'.csv')
@@ -20,6 +21,19 @@ def split_date(df):
     df.loc[:,'Month'] = df.index.month.values
     return df
 
+def calc_distance(loc_lat,loc_lon,file):
+    df = pd.read_csv(os.path.join(os.path.dirname(os.getcwd()),'Location Lists',file+'.csv'))
+    name = df['Name'].to_numpy()
+    lat = df['Latitude'].to_numpy()
+    lon = df['Longitude'].to_numpy()
+    dist = []
+    for i in range(len(lat)):
+        p = 0.017453292519943295
+        hav = 0.5 - cos((lat[i] - loc_lat) * p) / 2 + cos(loc_lat * p) * cos(lat[i] * p) * (1 - cos((lon[i] - loc_lon) * p)) / 2
+        dist.append(12742 * asin(sqrt(hav)))
+    minidx = np.argmin(dist)
+    return name[minidx] +'_'+ file
+
 def calc_multiyear(locations, start_date, end_date):
     years = np.arange(start_date.year,end_date.year+1)
     data = []
@@ -33,9 +47,29 @@ def calc_multiyear(locations, start_date, end_date):
             pristine_df = split_date(fetch_df(pristine_dir)) 
             polluted_df = split_date(fetch_df(polluted_dir))
 
-            polluted_df['Energy_Loss'] = ((polluted_df['Pmax']*10) - (pristine_df['Pmax']*10))/(pristine_df['Power'] * 1e9) * 100
+            polluted_df['Energy_Loss'] = ((polluted_df['Pmax']*10))#- (pristine_df['Pmax']*10))/(pristine_df['Power'] * 1e9) * 100
             polluted.append(polluted_df)
-        polluted = pd.concat(polluted)
+        polluted = pd.concat(polluted).fillna(0)
+        data.append(polluted['Energy_Loss'].to_numpy())
+    polluted.sort_index()
+    return polluted.index, data
+
+def calc_multiyear_power(locations, start_date, end_date):
+    years = np.arange(start_date.year,end_date.year+1)
+    data = []
+    for location in locations:
+        polluted = []
+        for year in years:
+
+            pristine_dir = 'PERC_'+location+'_pristine_'+str(year)
+            polluted_dir = 'PERC_'+location+'_'+str(year)
+
+            pristine_df = split_date(fetch_df(pristine_dir))
+            polluted_df = split_date(fetch_df(polluted_dir))
+
+            polluted_df['Energy_Loss'] = pristine_df['Pmax'] * 10
+            polluted.append(polluted_df)
+        polluted = pd.concat(polluted).fillna(0)
         data.append(polluted['Energy_Loss'].to_numpy())
     polluted.sort_index()
     return polluted.index, data
@@ -48,18 +82,23 @@ def spacial(dir, start_date, end_date, step, locs):
     start_date = start_date.replace(hour=12)
     end_date = end_date.replace(hour=12)
 
-    dir = os.path.join(os.path.dirname(os.getcwd()),'Location Lists',dir+'.csv')
-    subfiles = pd.read_csv(dir)
-    subfiles_names = [subfiles.loc[i]['Name'] +'_'+ subfiles.loc[i]['State'] for i in range(len(subfiles))]
 
     locs_dir = os.path.join(os.path.dirname(os.getcwd()),'Location Lists',locs+'.csv')
     locs = pd.read_csv(locs_dir)
+    print(locs)
+    locs_cap = locs['Nameplate Capacity (MW)'].to_numpy()
+    locs_cap_sum = np.sum(locs_cap)
     locs_names = locs['Name'].to_numpy()[::-1]
     locs_lat = locs['Latitude'].to_numpy()
     locs_lon = locs['Longitude'].to_numpy()
-    
+
+    dir = os.path.join(os.path.dirname(os.getcwd()), 'Location Lists', dir + '.csv')
+    subfiles = pd.read_csv(dir)
+    subfiles_names = [calc_distance(locs_lat[i],locs_lon[i],'California') for i in range(len(subfiles))]
 
     dates_of_data,energy_loss = calc_multiyear(subfiles_names,start_date,end_date)
+    d,power = calc_multiyear_power(subfiles_names,start_date,end_date)
+
     epoch = dt.datetime(1970,1,1)
     start_date_epoch = (start_date - epoch).total_seconds()
     end_date_epoch = (end_date - epoch).total_seconds()
@@ -77,41 +116,35 @@ def spacial(dir, start_date, end_date, step, locs):
     locs_lat_arg = [np.abs(latitudes_unique - lat).argmin() for lat in locs_lat][::-1]
     locs_lon_arg = [np.abs(longitudes_unique - lon).argmin() for lon in locs_lon][::-1]
 
-    latitudes = latitudes.values.ravel().reshape((len(longitudes_unique),len(latitudes_unique)))
-    longitudes = longitudes.values.ravel().reshape((len(longitudes_unique),len(latitudes_unique)))
 
-    data = np.zeros((len(longitudes_unique),len(latitudes_unique),len(dates_of_data)))
-    for idx,lon in enumerate(longitudes_unique):
-        for jdx,lat in enumerate(latitudes_unique):
-            index = subfiles.index[(subfiles['Latitude'] == lat)&(subfiles['Longitude'] == lon)].values[0]
-            data[idx,jdx,:] = energy_loss[index]
+    data = energy_loss
+    power_cal = power
     
     dates = pd.date_range(start_date,end_date,freq=str(step)+'H').values.ravel()
     dates_of_data_list = dates_of_data.values.ravel()
     dates_idx = np.searchsorted(dates_of_data_list,dates)
 
     plt.rcParams["figure.figsize"] = (11, 7)
-    fig, ax = plt.subplots(nrows=len(locs_names))
-    colours = ['tab:blue','tab:orange','tab:green','tab:red'][::-1]
+    #fig, ax = plt.subplots(1,1)
+    #colours = ['tab:blue','tab:orange','tab:green','tab:red'][::-1]
     for i in range(len(locs_names)):
-        energy_loss_sum = [data[locs_lon_arg[i],locs_lat_arg[i],j] for j in range(dates_idx[0],dates_idx[-1],8)]
-        ax[i].plot(dates_of_data_list[dates_idx[0]:dates_idx[-1]:8],energy_loss_sum,color=colours[i])
-        ax[i].set_ylim(top=0,bottom=-30)
-        ax[i].set_xlim(left=dates_of_data_list[dates_idx[0]],right=dates_of_data_list[dates_idx[-1]])
-        ax[i].text(dates_of_data_list[dates_idx[0]+2],-28,locs_names[i].replace('_',' '),color=colours[i])
-        if i != len(locs_names)-1:
-            ax[i].xaxis.set_visible(False)
-        else:
-            #dates = [dt.datetime(2020,1,1,12),dt.datetime(2020,7,2,12),dt.datetime(2020,12,31,12)]
-            dates = [dt.datetime(2020,8,16,12),dt.datetime(2020,9,5,12),dt.datetime(2020,9,25,12)]
-            ax[i].set_xticks(dates)
-        
-    fig.subplots_adjust(bottom=0.05, top=0.95, left=0.075, right=0.95, wspace=0.2, hspace=0.1)
-    fig.text(0.02, 0.5, 'Energy Lost (%)', va='center', rotation='vertical')
+        data[i] = data[i] * locs_cap[i]
+        power_cal[i] = power[i] * locs_cap[i]
 
+    data = np.asarray(data)
+    data = np.sum(data,axis=0)/locs_cap_sum
+    data = data[:2921]
+
+    power_cal = np.asarray(power_cal)
+    power_cal = np.sum(power_cal,axis=0)/locs_cap_sum
+    power_cal = power_cal[:2921]
+
+    plt.plot(dates[4::8],data[4::8])
+    plt.ylabel('Geographicaly Weighted Power Generation (Wm$^{-1}$)')
+    plt.plot(dates[4::8],power_cal[4::8],c='tab:orange')
+    plt.xlim(left=dates[0],right=dates[-1])
     return
  
-spacial('California','16/08/2020','25/09/2020','3','CaliforniaLocs')
-#plt.show()
-plt.savefig('California_Engery_Loss.png',dpi=600)
+spacial('California_SolarFarms','1/1/2020','31/12/2020','3','California_SolarFarms')
+plt.savefig('California_Engery_Loss_SolarFarms.png',dpi=600)
 #plt.savefig('California_Engery_Loss.svg')

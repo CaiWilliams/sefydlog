@@ -12,10 +12,10 @@ def generate(lat_min,lat_max,lon_min,lon_max,name):
     longitudes = (longitudes + 180) % 360 - 180
 
     num_lat = np.where((latitudes > lat_min) & (latitudes <= lat_max),latitudes,np.nan)
-    num_lat = num_lat[~np.isnan(num_lat)]
+    num_lat = num_lat[~np.isnan(num_lat)][::2]
 
     num_lon = np.where((longitudes > lon_min) & (longitudes  <= lon_max),longitudes,np.nan)
-    num_lon = num_lon[~np.isnan(num_lon)]
+    num_lon = num_lon[~np.isnan(num_lon)][::2]
 
     lat_lons = np.asarray(list(itertools.product(num_lat,num_lon)))
     lats = lat_lons[:,0]
@@ -31,4 +31,4 @@ def generate(lat_min,lat_max,lon_min,lon_max,name):
     data.to_csv(str(name)+'.csv', index=False)
     return
 
-generate(17,24,-86,-60,'Caribbean')
+generate(18.75,42,98.25,123,'China_LowRes')

@@ -692,10 +692,12 @@ def arleady_exists(f):
 if __name__ == '__main__':
     #global lock
     #lock = multiprocessing.Lock()
-    files = ['Set.csv','Caribbean.csv','China.csv','Australia.csv']
+    files = ['Caribbean_LowRes.csv','Australia_LowRes.csv','China_LowRes.csv']
     for file in files:
         locs = pd.read_csv(os.path.join(os.getcwd(),'Location Lists',file))
-        years = np.arange(2003,2021)
+        years = np.arange(2019,2021)
+        if file == 'China_LowRes.csv':
+                years = np.arange(2007,2010)
         rpbar = tqdm.tqdm(total=len(years)*len(locs)*2,mininterval=0)
         for year in years:
             for i in range(len(locs)):

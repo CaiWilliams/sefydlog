@@ -63,9 +63,24 @@ def compare_weeks(locs, period, central_start_date, periods):
 
 #compare_weeks(['Beijing'],8,dt.datetime(day=8,month=8,year=2008,hour=0),32)
 
-data = calc_multiyear(['London_England'],dt.datetime(day=1,month=1,year=2010,hour=12),dt.datetime(day=31,month=12,year=2010,hour=12))
-plt.plot(data['Energy_Loss'].rolling(8*7).mean())
-plt.savefig('volcano.png',dpi=600)
+data = calc_multiyear(['Porto_Velho_Brazil'],dt.datetime(day=1,month=1,year=2008,hour=12),dt.datetime(day=31,month=12,year=2020,hour=12))
+plt.plot(data['Energy_Loss'].clip(upper=0).rolling(8*7*4*12*2).mean())
+
+# plt.axvline(x=dt.datetime(day=23,month=6,year=2020,hour=12),linestyle=':',color='red')
+# plt.axvline(x=dt.datetime(day=23,month=6,year=2019,hour=12),linestyle=':',color='red')
+# plt.axvline(x=dt.datetime(day=23,month=6,year=2018,hour=12),linestyle=':',color='red')
+# plt.axvline(x=dt.datetime(day=23,month=6,year=2017,hour=12),linestyle=':',color='red')
+# plt.axvline(x=dt.datetime(day=23,month=6,year=2016,hour=12),linestyle=':',color='red')
+# plt.axvline(x=dt.datetime(day=23,month=6,year=2015,hour=12),linestyle=':',color='red')
+# plt.axvspan(xmin=dt.datetime(day=1,month=6,year=2020),xmax=dt.datetime(day=30, month=11,year=2020),color='red',alpha=0.25)
+# plt.axvspan(xmin=dt.datetime(day=1,month=6,year=2019),xmax=dt.datetime(day=30, month=11,year=2019),color='red',alpha=0.25)
+# plt.axvspan(xmin=dt.datetime(day=1,month=6,year=2018),xmax=dt.datetime(day=30, month=11,year=2018),color='red',alpha=0.25)
+# plt.axvspan(xmin=dt.datetime(day=1,month=6,year=2017),xmax=dt.datetime(day=30, month=11,year=2017),color='red',alpha=0.25)
+# plt.axvspan(xmin=dt.datetime(day=1,month=6,year=2016),xmax=dt.datetime(day=30, month=11,year=2016),color='red',alpha=0.25)
+# plt.axvspan(xmin=dt.datetime(day=1,month=6,year=2015),xmax=dt.datetime(day=30, month=11,year=2015),color='red',alpha=0.25)
+plt.ylabel('Power Loss (%)')
+#plt.ylim(top=0)
+plt.savefig('Brazil.png',dpi=600)
 #plt.twinx()
 #plt.plot(data['PCE'].rolling(8*7,center=True).mean(),c='tab:orange')
 #

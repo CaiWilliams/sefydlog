@@ -1,8 +1,12 @@
+import os.path
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 
-data = pd.read_csv('Californian_Fires.csv')
+data = pd.read_csv(os.path.join(os.path.dirname(os.getcwd()),'Location Lists','Californian_Fires.csv'))
 x = data['Year'].to_numpy()
 y1 = data['Fires'].to_numpy()
 y2 = data['Acers'].to_numpy()/247.1
@@ -43,5 +47,5 @@ plt.arrow(1990,7500,5,0,length_includes_head=True,width=300,head_length=1,edgeco
 
 plt.subplots_adjust(bottom=0.1, top=0.95, left=0.15, right=0.85, wspace=0.05, hspace=0.05)
 #plt.show()
-plt.savefig('California_Wild_Fires.png',dpi=1200)
-plt.savefig('California_Wild_Fires.svg')
+plt.savefig('California_Wild_Fires.png',dpi=600)
+#plt.savefig('California_Wild_Fires.svg')

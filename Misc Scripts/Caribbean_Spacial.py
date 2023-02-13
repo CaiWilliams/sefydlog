@@ -11,7 +11,7 @@ from scipy.interpolate import interp2d
 import datetime as dt
 
 def fetch_df(name):
-    file = os.path.join(os.path.dirname(os.getcwd()),'Results_errors',name+'.csv')
+    file = os.path.join(os.path.dirname(os.getcwd()),'Results',name+'.csv')
     data = pd.read_csv(file)
     return data
 
@@ -36,7 +36,7 @@ def calc_multiyear(locations, start_date, end_date):
             pristine_df = split_date(fetch_df(pristine_dir)) 
             polluted_df = split_date(fetch_df(polluted_dir))
 
-            polluted_df['Energy_Loss'] = (((polluted_df['Pmax']*10)) - (pristine_df['Pmax']*10)) / (pristine_df['Power'] * 1e9) * 100
+            polluted_df['Energy_Loss'] = (((polluted_df['Pmax']*10)) )#- (pristine_df['Pmax']*10)) / (pristine_df['Power'] * 1e9) * 100
 
             polluted.append(polluted_df)
         polluted = pd.concat(polluted).fillna(0)
@@ -125,7 +125,7 @@ def spacial(dir, start_date, end_date, step):
             if idx == 3 and jdx == 3:
                 print(lat,lon)
             index = subfiles.index[(subfiles['Latitude'] == lat)&(subfiles['Longitude'] == lon)].values[0]
-            data[jdx,idx,:] = energy_loss[index]
+            data[idx,jdx,:] = energy_loss[index]
 
     dates = pd.date_range(start_date,end_date,freq=str(step)+'H').values.ravel()
     dates_of_data_list = dates_of_data.values.ravel()
@@ -135,30 +135,25 @@ def spacial(dir, start_date, end_date, step):
         if i >= len(dates_idx):
             fig.delaxes(ax[i])
         else:
-            l = np.around(np.arange(-30,2,2),0)
+            l = np.around(np.arange(-30,0,1),0)
             cs = ax[i].contourf(longitudes,latitudes,data[:,:,dates_idx[i]],transform = ccrs.PlateCarree(),levels=l,cmap='inferno_r')
             year = str(dates_of_data[dates_idx[i]].year)
             month = str(dates_of_data[dates_idx[i]].month)
             day = str(dates_of_data[dates_idx[i]].day)
-            if i == 0:
-                ax[i].set_title(year+'-'+month+'-'+day,fontsize=9,pad=3)
-            elif i == 1:
-                ax[i].set_title('+'+str(step)+'Hrs', fontsize=9, pad=3)
-            elif i == len(ax)-1:
-                ax[i].set_xlabel(year+'-'+month+'-'+day,fontsize=9)
+            # if i == 0:
+            #     ax[i].set_title(year+'-'+month+'-'+day,fontsize=9,pad=3)
+            # elif i == 1:
+            #     ax[i].set_title('+'+str(step)+'Hrs', fontsize=9, pad=3)
+            # elif i == len(ax)-1:
+            #     ax[i].set_xlabel(year+'-'+month+'-'+day,fontsize=9)
             ax[i].add_feature(cfeature.STATES.with_scale('110m'),linestyle=':',edgecolor='white')
             ax[i].coastlines(color='white')
-            ax[i].plot(-118.5426,34.3917,transform = ccrs.PlateCarree(),marker='o',markersize=2)
-            ax[i].plot(-119.7871,36.7378,transform = ccrs.PlateCarree(),marker='o',markersize=2)
-            ax[i].plot(-121.4911,38.5816,transform = ccrs.PlateCarree(),marker='o',markersize=2)
-            ax[i].plot(-122.3917,40.5865,transform = ccrs.PlateCarree(),marker='o',markersize=2)
     fig.subplots_adjust(bottom=0.20, top=0.80, left=0.05, right=0.82, wspace=0.01, hspace=0.05)
     cbar_ax = fig.add_axes([0.85, 0.15, 0.01, 0.7])
-    cbar = fig.colorbar(cs,cax=cbar_ax,orientation='vertical',label='Energy Lost (Wm$^{-2}$)',ticks=[-0,-5,-10,-15,-20,-25,-30])
-    fig.text(0.7125,0.17,'2020-9-25', va='center', rotation='horizontal',fontsize=9)
+    cbar = fig.colorbar(cs,cax=cbar_ax,orientation='vertical',label='Energy Lost (Wm$^{-2}$)')
     return
  
-spacial('California','16/08/2020','25/09/2020',48)
+spacial('Caribbean','16/08/2003','25/09/2003',48)
 #plt.show()
-plt.savefig('California_Spacial.png',dpi=600)
+plt.savefig('Caribbean_Spacial.png',dpi=600)
 #plt.savefig('California_Spacial.svg')

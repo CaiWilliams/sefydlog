@@ -65,6 +65,13 @@ def compare_weeks(locs, period, central_start_date, periods):
 
 data = calc_multiyear(['London_England'],dt.datetime(day=1,month=1,year=2010,hour=12),dt.datetime(day=31,month=12,year=2010,hour=12))
 plt.plot(data['Energy_Loss'].rolling(8*7).mean())
+
+data = calc_multiyear(['Reykjavik_Iceland'],dt.datetime(day=1,month=1,year=2010,hour=12),dt.datetime(day=31,month=12,year=2010,hour=12))
+plt.plot(data['Energy_Loss'].rolling(8*7).mean())
+
+plt.axvline(x=dt.datetime(day=20,month=3,year=2010,hour=12),linestyle=':',color='red')
+plt.axvspan(xmin=dt.datetime(day=14,month=4,year=2010,hour=12),xmax=dt.datetime(day=16,month=5,year=2010,hour=12),color='red',alpha=0.25)
+
 plt.savefig('volcano.png',dpi=600)
 #plt.twinx()
 #plt.plot(data['PCE'].rolling(8*7,center=True).mean(),c='tab:orange')
