@@ -28,7 +28,7 @@ def gas_concentrations(Site_Pressure, Site_Temperature, pollution):
     CH4 = CH4 - 146e-3
     CO = CO - 152e-3
     NH03 = NH03 -1.2001e-3
-    NO2 = NO2 + 62.5e6
+    NO2 = NO2 + 62.5e-6
     SO2 = SO2 - 31.2e-6
     Ab = [CH2O,CH4,CO,NH02,NH03,NO,NO2,NO3,SO2]
     #Ab = [a for a in Ab]
@@ -45,16 +45,18 @@ def gas_concentrations(Site_Pressure, Site_Temperature, pollution):
         case 'severe':
             Ap = [0.01,0.4,9.9,0.01,0.012,0.5,0.2,2e-4,0.175,0.2]
     Ab = np.asarray([Ab[i] + Ap[i] for i in range(len(Ab))])
+    Ab = np.clip(Ab,a_min=0,a_max=np.inf)
     return Ab
 
 if __name__ == '__main__':
     #print(pristine_conditions(1000,293.15,'Pristine'))
-    RW,RI = spectrum_pristine(1001,0,40,20,'SUMMER',40,'S&F_RURAL',2020,7,1,12,54.773525,-1.575864,0)
-    #plt.plot(RW,RI)
+    #RW,RI = spectrum_pristine(1001,0,40,20,'SUMMER',40,'S&F_RURAL',2020,7,1,12,54.773525,-1.575864,0)
+    ##plt.plot(RW,RI)
 
-    Gasses = gas_concentrations(1000,293.15,'pristine')
-    t = 281.57664011764706-273.15
-    TW,TI = spectrum_refrence_ozone(92495.07952941177,0,T,85.46066450588233,'SUMMER',T,0,1.7474728258823529,0.19,6e-05,0.001,0,0.001,280,'S&F_RURAL',0,13.90289656,2020,7,1,12,54.773525,-1.575864,0)
-    plt.plot(TW,TI-RI)
+    Gasses = gas_concentrations(np.asarray([1000,1000]),np.asarray([273.15,293.15]),'pristine')
+    print(Gasses)
+    #t = 281.57664011764706-273.15
+    #TW,TI = spectrum_refrence_ozone(92495.07952941177,0,T,85.46066450588233,'SUMMER',T,0,1.7474728258823529,0.19,6e-05,0.001,0,0.001,280,'S&F_RURAL',0,13.90289656,2020,7,1,12,54.773525,-1.575864,0)
+    #plt.plot(TW,TI-RI)
 
-    plt.show()
+    #plt.show()

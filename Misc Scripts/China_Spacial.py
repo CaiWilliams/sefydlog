@@ -116,7 +116,7 @@ def spacial(dir, start_date, end_date, step):
     cbar = fig.colorbar(cs,cax=cbar_ax,orientation='vertical',label='Energy Lost (Wm$^{-2}$)')
     return
  
-spacial('Caribbean_LowRes','22/06/2019','24/06/2019',24)
+spacial('China_LowRes','08/08/2008','24/08/2008',24)
 #plt.show()
-plt.savefig('Caribbean_Spacial_2019.png',dpi=600)
+plt.savefig('China_Spacial_2008.png',dpi=600)
 #plt.savefig('California_Spacial.svg')

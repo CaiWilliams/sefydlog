@@ -31,4 +31,5 @@ def generate(lat_min,lat_max,lon_min,lon_max,name):
     data.to_csv(str(name)+'.csv', index=False)
     return
 
-generate(18.75,42,98.25,123,'China_LowRes')
+
+#generate(18.75,42,98.25,123,'China_LowRes')

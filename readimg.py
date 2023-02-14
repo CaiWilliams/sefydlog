@@ -1,5 +1,4 @@
 from smarts import *
-from GPVDM import *
 from Equivelent_Circuit import *
 from generate_pristine_concentrations import gas_concentrations
 
@@ -7,7 +6,6 @@ from generate_pristine_concentrations import gas_concentrations
 from PIL import Image
 import numpy as np
 import os
-import matplotlib.pyplot as plt
 import datetime
 
 
@@ -232,7 +230,7 @@ class Atmosphere():
         try:
             wavelength,intensity = spectrum_refrence_ozone(surface_air_pressure/100,0,air_temperature,relative_humidity,season,air_temperature,formaldehyde,methane,carbon_monoxide,nitric_acid,nitrogen_dioxide,oz,sulfur_dioxide,carbon_di,'S&F_RURAL',TAU550,water_vapour,date.year,date.month,date.day,date.hour,latitude,longitude,timezone)
         except:
-            wavelength = 0 
+            wavelength = 0
             intensity = 0
         return wavelength, intensity
 
@@ -345,6 +343,7 @@ def fetch_wavlength_intensity_one_at_a_time(data):
     except:
         wavelength = 0
         intensity = 0
+    Power = np.sum(np.asarray(intensity))
     df = pd.DataFrame()
     df['Wavelength'] = wavelength
     df['Intensity'] = intensity
@@ -352,7 +351,7 @@ def fetch_wavlength_intensity_one_at_a_time(data):
     dir = os.path.join(os.getcwd(),'Temp','Spectrums','temp'+str(idx)+'.csv')
     df.to_csv(dir)
     #np.savetxt(dir, data, delimiter='\t',header=header)
-    return 
+    return Power
 
 
 def save_to_oghma_mp(data):
@@ -576,7 +575,7 @@ def run_dates_mp_SDM_one_at_a_time(name,start_year,end_year,longitude,latitude):
     data_list = []
     pool = multiprocessing.Pool(processes=100)
     data_list = np.asarray(pool.map(load_loc,dates_it))
-
+    d_list = copy.deepcopy(data_list)
     press = np.asarray([data_list[i][11]/100 for i in range(0,len(data_list))])
     temps = np.asarray([data_list[i][7] for i in range(0,len(data_list))])
     water = np.asarray([data_list[i][3] for i in range(0,len(data_list))])
@@ -584,10 +583,10 @@ def run_dates_mp_SDM_one_at_a_time(name,start_year,end_year,longitude,latitude):
     gas = gas_concentrations(press,temps,'pristine').T
     temp_pristine = []
     for i in range(np.shape(data_list)[0]):
-        print(i)
-        print(data_list[i,12])
-        temp_pristine.append([gas[i,2],gas[i,8],gas[i,4],0,gas[i,1],0,gas[i,0],temps[i],gas[i,6],0,280,press[i],rh[i]])
+        temp_pristine.append([gas[i,2],gas[i,8],gas[i,4],water[i],gas[i,1],0,gas[i,0],temps[i],gas[i,6],0,280,press[i],rh[i]])
     #temp_pristine = [[gas[i,2],gas[i,8],gas[8,4],data_list[3][i],gas[i,1],0,gas[i,0],data_list[i][7],gas[i,6],0,280,data_list[11][i],data_list[12][i]] for i in range(np.shape(data_list)[0])]
+    temp_pristine = np.asarray(temp_pristine)
+    temp_data_list = copy.deepcopy(temp_pristine)
     for i in range(0,len(data_list[0])):
 
         #gas = gas_concentrations(pres,np.asarray(data_list[:][7]),'pristine')
@@ -602,27 +601,31 @@ def run_dates_mp_SDM_one_at_a_time(name,start_year,end_year,longitude,latitude):
         #temp_pristine = [[gas[i][2],gas[i][8],gas[i][4],data_list[i][3],gas[i][1],0,gas[i][0],data_list[i][7],gas[i][6],0,280,data_list[i][11],data_list[i][12]] for i in range(0,len(data_list))]
 
         #pristine = np.asarray([0.19,1e-3,60e-6,0,1.5,0,0,293,1e-3,0.04,280,10000,50])
-        temp_data_list = np.zeros(np.shape(data_list))
-        temp_data_list = copy.deepcopy(temp_pristine)
+        #temp_data_list = np.zeros(np.shape(data_list))
+        #temp_data_list = copy.deepcopy(temp_pristine)
         #print(data_list[:][i])
-        temp_data_list[:][i] = data_list[:][i]
+        d_list[:,i] = temp_data_list[:,i]
         #print(np.shape(temp_data_list[:][0]))
         #plt.plot(temp_data_list[:][0])
         # #print(temp_data_list)
         #if i != 10:
         #    temp_data_list[:,10] = 280
-
-        data = [[longitude,latitude,idx,date,temp_data_list[idx]] for idx,date in enumerate(dates)]
+        print(temp_data_list)
+        data = [[longitude,latitude,idx,date,d_list[idx]] for idx,date in enumerate(dates)]
         #print(temp_data_list[0])
-        for _ in tqdm.tqdm(pool.imap_unordered(fetch_wavlength_intensity_one_at_a_time,data), total=len(data)):
-           pass
-        
+        power = pool.map(fetch_wavlength_intensity_one_at_a_time,data)
+        for idx, j in enumerate(power):
+            data[idx].append(j)
+
+
         n = ['carbon_monoxide', 'sulfur_dioxide', 'nitric_acid', 'water_vapour', 'methane', 'TAU550', 'formaldehyde', 'air_temperature', 'nitrogen_dioxide', 'ozone', 'carbon_dioxide', 'surface_air_pressure','relative_humidity']
-        resutls_r = []
+        #resutls_r = []
         results_r = pool.map(write,data)
-        results = pd.DataFrame(data=results_r,columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
+        results = pd.DataFrame(data=results_r,columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour','Power'])
         results.to_csv(os.path.join(os.getcwd(),'Results',name+'_'+n[i])+'.csv')
         #print(temp_data_list[0])
+        temp_data_list = copy.deepcopy(temp_pristine)
+        d_list = copy.deepcopy(data_list)
     return
 
 def run_dates_mp(name,year,longitude,latitude):
@@ -692,15 +695,15 @@ def arleady_exists(f):
 if __name__ == '__main__':
     #global lock
     #lock = multiprocessing.Lock()
-    files = ['Caribbean_LowRes.csv','Australia_LowRes.csv','China_LowRes.csv']
+    files = ['CaliforniaLocs.csv']
     for file in files:
         locs = pd.read_csv(os.path.join(os.getcwd(),'Location Lists',file))
-        years = np.arange(2019,2021)
+        years = np.arange(2020,2021)
         if file == 'China_LowRes.csv':
                 years = np.arange(2007,2010)
         rpbar = tqdm.tqdm(total=len(years)*len(locs)*2,mininterval=0)
         for year in years:
-            for i in range(len(locs)):
+            for i in range(1,len(locs)):
                 name = locs.loc[i]['Name']
                 state = locs.loc[i]['State']
                 lat = float(locs.loc[i]['Latitude'])
@@ -710,14 +713,14 @@ if __name__ == '__main__':
                 file_status_f = arleady_exists(f)
                 file_status_fp = arleady_exists(fp)
 
-                if file_status_f == False:
-                    run_dates_mp_SDM(f,year,year,lon,lat)
-                    rpbar.update(1)
-                else:
-                    rpbar.update(1)
+                #if file_status_f == False:
+                run_dates_mp_SDM_one_at_a_time(f,year,year,lon,lat)
+                rpbar.update(1)
+                #else:
+                #    rpbar.update(1)
 
-                if file_status_fp == False:
-                    run_dates_mp_SDM_pristine(fp,year,year,lon,lat)
-                    rpbar.update(1)
-                else:
-                    rpbar.update(1)
+                #if file_status_fp == False:
+                #    run_dates_mp_SDM_pristine(fp,year,year,lon,lat)
+                #    rpbar.update(1)
+                #else:
+                #    rpbar.update(1)
