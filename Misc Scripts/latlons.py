@@ -14,4 +14,4 @@ n[:] = np.nan
 latitudes = np.append(latitudes,n)
 data['latitudes'] = latitudes
 print(data)
-data.to_csv('latlons.csv')
+#data.to_csv('latlons.csv')

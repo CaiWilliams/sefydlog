@@ -1,10 +1,7 @@
 import os
 import shutil
-import subprocess
 import pandas as pd
-import matplotlib.pyplot as plt
 import numpy as np
-import time
 import secrets
 
 class input_file:
@@ -155,9 +152,9 @@ class input_file:
         return self
     
     def run(self):
-        os.chdir('SMARTS_'+str(self.hash))
-        os.system('./smarts295batch')
-        os.chdir('..')
+        #os.chdir('SMARTS_'+str(self.hash))
+        os.system('cd' + ' SMARTS_'+str(self.hash) + '&& ./smarts295batch' + '&& cd ..')
+        #os.chdir('..')
         return
 
     def retrive(self):
@@ -165,14 +162,12 @@ class input_file:
         return data['Wvlgth'],data['Global_tilted_irradiance']
 
     def plot(self):
-        data = pd.read_csv(os.path.join('SMARTS','smarts295.ext.txt'),delimiter=' ',index_col=False)
+        data = pd.read_csv(os.path.join('SMARTS_'+str(self.hash),'smarts295.ext.txt'),delimiter=' ',index_col=False)
         plt.plot(data['Wvlgth'],data['Global_tilted_irradiance'])
 
     def delete(self):
         shutil.rmtree(os.path.join(os.getcwd(),'SMARTS_'+str(self.hash)))
-        #os.remove(os.path.join('SMARTS','smarts295.ext.txt'))
-        #os.remove(os.path.join('SMARTS','smarts295.inp.txt'))
-        #os.remove(os.path.join('SMARTS','smarts295.out.txt'))
+
 
 class comment:
     def __init__(self, text):
@@ -379,7 +374,81 @@ class mass:
                 self.latitude = kwargs['latitude']
                 self.time_interval = kwargs['time_interval']
 
-def spectrum_pristine(surface_pressure, altitude, site_temp, relative_humidity, season, average_daily_temperature, aerosol_model, year, month, day, hour, latitude, longitude, timezone):
+
+def spectrum_pristine(surface_pressure, altitude, site_temp, relative_humidity, season, average_daily_temperature,
+                      aerosol_model, year, month, day, hour, latitude, longitude, timezone):
+    A = comment('')
+    B = input_file()
+    B = B.add_comment(A)
+
+    A = pressure(1, surface_pressure=surface_pressure, altitude=altitude, height=0)
+    B = B.add_pressure(A)
+
+    A = atmosphere(0, atmospheric_site_temp=site_temp, relative_humidity=relative_humidity, season=season,
+                   average_daily_temp=average_daily_temperature)
+    B = B.add_atmosphere(A)
+
+    A = water_vapor(1)
+    B = B.add_water_vapor(A)
+
+    A = ozone(1)
+    B = B.add_ozone(A)
+
+    A = gas(1, load=1)
+    B = B.add_gas(A)
+
+    A = carbon_dioxide(280, 1)
+    B = B.add_carbon_dioxide(A)
+
+    A = aerosol(aerosol_model)
+    B = B.add_aerosol(A)
+
+    A = turbidity(5, TAU550=0)
+    B = B.add_turbidity(A)
+
+    # if latitude >= 0:
+    #     az = 0
+    #     tilt = (latitude * 0.9) + 29
+    # else:
+    #     az = 0
+    #     tilt = (latitude * 0.9) - 23.5
+    #A = abledo(38, tilt = 1, albdg=38, surface_angle=tilt, surface_azimuth=az)
+    A = abledo(38, tilt=0)
+    # A = abledo(20, tilt = 1, albdg=20, surface_angle=37, surface_azimuth=90)
+    B = B.add_abledo(A)
+
+    A = spectral_range(300, 1200, 1, 1367.0)
+    B = B.add_spectral_range(A)
+
+    A = print_output(2, wavelength_min=300, wavelength_max=1200, interval=2, num_output_variabels=4,
+                     output_variables=[8, 9, 10, 30])
+    B = B.add_print(A)
+
+    A = circumsolar(0, slope=0, aperture=2.9, limit=0)
+    B = B.add_circumsolar(A)
+
+    A = scan(0)
+    B = B.add_scan(A)
+
+    A = illuminance(0)
+    B = B.add_illuminance(A)
+
+    A = ultra_violet(0)
+    B = B.add_ultra_violet(A)
+
+    A = mass(3, year=year, month=month, day=day, hour=hour, latitude=latitude, longitude=longitude, time_zone=timezone)
+    B = B.add_mass(A)
+
+    B.save()
+    B.run()
+    try:
+        wavelength, irradiance = B.retrive()
+        B.delete()
+        return wavelength, irradiance
+    except:
+        B.delete()
+
+def spectrum_pristine_tilt(surface_pressure, altitude, site_temp, relative_humidity, season, average_daily_temperature, aerosol_model, year, month, day, hour, latitude, longitude, timezone):
     A = comment('')
     B = input_file()
     B = B.add_comment(A)
@@ -408,21 +477,21 @@ def spectrum_pristine(surface_pressure, altitude, site_temp, relative_humidity, 
     A = turbidity(5, TAU550=0)
     B = B.add_turbidity(A)
 
-    # if latitude >= 0:
-    #     az = 0
-    #     tilt = latitude * 0.9 + 29
-    # else:
-    #     az = 0
-    #     tilt = latitude * 0.9 - 23.5
-    # A = abledo(38, tilt = 1, albdg=38, surface_angle=tilt, surface_azimuth=az)
-    A  = abledo(38, tilt=0)
+    if latitude >= 0:
+        az = 180
+        tilt = (np.abs((latitude * 0.9) - 23.5) + np.abs((latitude * 0.9) + 23.5))/2
+    else:
+        az = 180
+        tilt = (np.abs((latitude * 0.9) - 23.5) + np.abs((latitude * 0.9) + 23.5))/2
+    A = abledo(38, tilt=1, albdg=38, surface_angle=tilt, surface_azimuth=az)
+    #A  = abledo(38, tilt=0)
     #A = abledo(20, tilt = 1, albdg=20, surface_angle=37, surface_azimuth=90)
     B = B.add_abledo(A)
 
-    A = spectral_range(300,3000,1,1367.0)
+    A = spectral_range(300,1200,1,1367.0)
     B = B.add_spectral_range(A)
 
-    A = print_output(2, wavelength_min = 280, wavelength_max = 4000, interval = 2, num_output_variabels=4, output_variables=[8, 9 ,10, 30])
+    A = print_output(2, wavelength_min = 300, wavelength_max = 1200, interval = 2, num_output_variabels=4, output_variables=[8, 9 ,10, 30])
     B = B.add_print(A)
 
     A = circumsolar(0, slope=0, aperture=2.9, limit=0)
@@ -482,21 +551,20 @@ def spectrum_refrence_ozone(surface_pressure, altitude, site_temp, relative_humi
         B = B.add_turbidity(A)
 
         if latitude >= 0:
-            az = 0
-            tilt = latitude * 0.9 + 29
+            az = 180
+            tilt = (np.abs((latitude * 0.9) - 23.5) + np.abs((latitude * 0.9) + 23.5)) / 2
         else:
-            az = 0
-            tilt = latitude * 0.9 - 23.5
-            
-        A = abledo(38, tilt = 0)
+            az = 360
+            tilt = (np.abs((latitude * 0.9) - 23.5) + np.abs((latitude * 0.9) + 23.5)) / 2
+        A = abledo(38, tilt=1, albdg=38, surface_angle=tilt, surface_azimuth=az)
         #A = abledo(38, tilt = 1, albdg=38, surface_angle=tilt, surface_azimuth=az)
         #A = abledo(20, tilt = 1, albdg=20, surface_angle=37, surface_azimuth=90)
         B = B.add_abledo(A)
 
-        A = spectral_range(300,3000,1,1367.0)
+        A = spectral_range(300,1200,1,1367.0)
         B = B.add_spectral_range(A)
 
-        A = print_output(2, wavelength_min = 280, wavelength_max = 4000, interval = 2, num_output_variabels=4, output_variables=[8, 9 ,10, 30])
+        A = print_output(2, wavelength_min = 300, wavelength_max = 1200, interval = 2, num_output_variabels=4, output_variables=[8, 9 ,10, 30])
         B = B.add_print(A)
 
         A = circumsolar(0, slope=0, aperture=2.9, limit=0)
@@ -554,25 +622,25 @@ def spectrum(surface_pressure, altitude, site_temp, relative_humidity, season, a
         A = turbidity(5, TAU550=TAU550)
         B = B.add_turbidity(A)
 
-        if latitude >= 0:
-            az = 0
-            tilt = latitude * 0.9 + 29
-        else:
-            az = 0
-            tilt = latitude * 0.9 - 23.5
+        # if latitude >= 0:
+        #     az = 0
+        #     tilt = latitude * 0.9 + 29
+        # else:
+        #     az = 0
+        #     tilt = latitude * 0.9 - 23.5
             
         A = abledo(38, tilt = 0)
         #A = abledo(38, tilt = 1, albdg=38, surface_angle=tilt, surface_azimuth=az)
         #A = abledo(20, tilt = 1, albdg=20, surface_angle=37, surface_azimuth=90)
         B = B.add_abledo(A)
 
-        A = spectral_range(300,3000,1,1367.0)
+        A = spectral_range(300,1200,1,1367.0)
         B = B.add_spectral_range(A)
 
-        A = print_output(2, wavelength_min = 280, wavelength_max = 4000, interval = 2, num_output_variabels=4, output_variables=[8, 9 ,10, 30])
+        A = print_output(2, wavelength_min = 300, wavelength_max = 1200, interval = 2, num_output_variabels=4, output_variables=[8, 9 ,10, 30])
         B = B.add_print(A)
 
-        A = circumsolar(0, slope=0, aperture=2.9, limit=0)
+        A = circumsolar(0)
         B = B.add_circumsolar(A)
 
         A = scan(0)
@@ -596,8 +664,90 @@ def spectrum(surface_pressure, altitude, site_temp, relative_humidity, season, a
         except:
             B.delete()
 
+
+def spectrum_tilt(surface_pressure, altitude, site_temp, relative_humidity, season, average_daily_temperature, formaldehyde,
+             methane, carbon_monoxide, nitric_acid, nitrogen_dioxide, ozone3, sulfur_dioxide, carbon_dioxide_ab,
+             aerosol_model, TAU550, water_vapour, year, month, day, hour, latitude, longitude, timezone):
+    A = comment('')
+    B = input_file()
+    B = B.add_comment(A)
+
+    A = pressure(1, surface_pressure=surface_pressure, altitude=altitude, height=0)
+    B = B.add_pressure(A)
+
+    A = atmosphere(0, atmospheric_site_temp=site_temp, relative_humidity=relative_humidity, season=season,
+                   average_daily_temp=average_daily_temperature)
+    B = B.add_atmosphere(A)
+
+    if water_vapour > 12:
+        water_vapour = 12
+    A = water_vapor(0, water=water_vapour)
+    B = B.add_water_vapor(A)
+
+    A = ozone(0, altitude_correction=0, abundance=ozone3 * 1e1)
+    B = B.add_ozone(A)
+
+    A = gas(0, load=0, formaldehyde=formaldehyde, methane=methane, carbon_monoxide=carbon_monoxide, nitrous_acid=0,
+            nitric_acid=nitric_acid, nitric_oxide=0, nitrogen_dioxide=nitrogen_dioxide, nitrogen_trioxide=0,
+            ozone=ozone3, sulfur_dioxide=sulfur_dioxide)
+    B = B.add_gas(A)
+
+    A = carbon_dioxide(carbon_dioxide_ab, 1)
+    B = B.add_carbon_dioxide(A)
+
+    A = aerosol(aerosol_model)
+    B = B.add_aerosol(A)
+
+    A = turbidity(5, TAU550=TAU550)
+    B = B.add_turbidity(A)
+
+    if latitude >= 0:
+        az = 180
+        #tilt = np.abs((latitude * 0.9) - 23.5)
+        tilt = (np.abs((latitude * 0.9) - 23.5) + np.abs((latitude * 0.9) + 23.5))/2
+        #print(tilt)
+    else:
+        az = 180
+        tilt = (np.abs((latitude * 0.9) - 23.5) + np.abs((latitude * 0.9) + 23.5))/2
+
+    #A = abledo(38, tilt=0)
+    A = abledo(38, tilt = 1, albdg=38, surface_angle=tilt, surface_azimuth=az)
+    # A = abledo(20, tilt = 1, albdg=20, surface_angle=37, surface_azimuth=90)
+    B = B.add_abledo(A)
+
+    A = spectral_range(300, 3000, 1, 1367.0)
+    B = B.add_spectral_range(A)
+
+    A = print_output(2, wavelength_min=280, wavelength_max=4000, interval=2, num_output_variabels=4,
+                     output_variables=[8, 9, 10, 30])
+    B = B.add_print(A)
+
+    A = circumsolar(0, slope=0, aperture=2.9, limit=0)
+    B = B.add_circumsolar(A)
+
+    A = scan(0)
+    B = B.add_scan(A)
+
+    A = illuminance(0)
+    B = B.add_illuminance(A)
+
+    A = ultra_violet(0)
+    B = B.add_ultra_violet(A)
+
+    A = mass(3, year=year, month=month, day=day, hour=hour, latitude=latitude, longitude=longitude, time_zone=timezone)
+    B = B.add_mass(A)
+
+    B.save()
+    B.run()
+    try:
+        wavelength, irradiance = B.retrive()
+        B.delete()
+        return wavelength, irradiance
+    except:
+        B.delete()
+
 if __name__ == '__main__':
-    X = np.linspace(0,100,10)
+    X = np.linspace(0,1,100)
     for x in X:
         A = comment('Testting test testing')
         B = input_file()
@@ -625,19 +775,19 @@ if __name__ == '__main__':
         A = aerosol('S&F_RURAL')
         B = B.add_aerosol(A)
 
-        A = turbidity(0, TAU5 = 0.084)
+        A = turbidity(0, TAU5 = x)
         B = B.add_turbidity(A)
 
-        A = abledo(20, tilt = 0)#, albdg=20, surface_angle=37, surface_azimuth=90)
+        A = abledo(38, tilt = 0)#, albdg=20, surface_angle=37, surface_azimuth=90)
         B = B.add_abledo(A)
 
-        A = spectral_range(280,4000,1,1367.0)
+        A = spectral_range(300,1200,1,1367.0)
         B = B.add_spectral_range(A)
 
-        A = print_output(2, wavelength_min = 280, wavelength_max = 4000, interval = 2, num_output_variabels=4, output_variables=[8, 9 ,10, 30])
+        A = print_output(2, wavelength_min = 300, wavelength_max = 1200, interval = 2, num_output_variabels=4, output_variables=[8, 9 ,10, 30])
         B = B.add_print(A)
 
-        A = circumsolar(1, slope=0, aperture=2.9, limit=0)
+        A = circumsolar(0)
         B = B.add_circumsolar(A)
 
         A = scan(0)
@@ -654,6 +804,6 @@ if __name__ == '__main__':
 
         B.save()
         B.run()
-        B.plot()
+        #B.plot()
         B.delete()
-    plt.show()
+    #plt.show()

@@ -5,8 +5,7 @@ import pandas as pd
 import numpy as np
 import os
 import matplotlib
-matplotlib.use('Agg')
-from scipy.interpolate import interp2d
+matplotlib.use('TkAgg')
 import datetime as dt
 
 def fetch_df(name):
@@ -63,9 +62,18 @@ def compare_weeks(locs, period, central_start_date, periods):
 
 #compare_weeks(['Beijing'],8,dt.datetime(day=8,month=8,year=2008,hour=0),32)
 
-data = calc_multiyear(['London_England'],dt.datetime(day=1,month=1,year=2010,hour=12),dt.datetime(day=31,month=12,year=2010,hour=12))
-plt.plot(data['Energy_Loss'].rolling(8*7).mean())
-plt.savefig('volcano.png',dpi=600)
+data = calc_multiyear(['Beijing_China'],dt.datetime(day=1,month=1,year=2008,hour=12),dt.datetime(day=31,month=12,year=2008,hour=12))
+#for i in range(1,13):
+t = data#[data.index.month == i]
+t = t.groupby(t.index.dayofweek).mean()
+plt.plot(['Monday','Tuesday','Wednesday','Thrusday','Friday','Saturday','Sunday'],t['Energy_Loss'])
+plt.xlabel('Day of Week')
+plt.ylabel('Average Electrical Power Loss (W/Wm$^{-2}$)')
+plt.ylim(top=-8,bottom=-10)
+#plt.legend()
+#plt.plot(data['Energy_Loss'])
+plt.savefig('Beijing_DaysOfWeek.png',dpi=600)
+#plt.show()
 #plt.twinx()
 #plt.plot(data['PCE'].rolling(8*7,center=True).mean(),c='tab:orange')
 #

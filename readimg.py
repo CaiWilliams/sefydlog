@@ -1,3 +1,5 @@
+import time
+
 from smarts import *
 from Equivelent_Circuit import *
 from generate_pristine_concentrations import gas_concentrations
@@ -11,6 +13,7 @@ import datetime
 
 from timezonefinder import TimezoneFinder
 import pytz
+from zoneinfo import ZoneInfo
 
 import multiprocessing
 import tqdm
@@ -156,6 +159,36 @@ class Atmosphere():
             wavelength = 0 
             intensity = 0
         return wavelength, intensity
+
+
+    def generate_spectrum_standalone_tilt(latitude, longitude, date, data):
+        tf = TimezoneFinder()
+        lat = latitude
+        long = longitude
+        timezone = tf.timezone_at(lat=lat,lng=long)
+        try:
+            timezone = datetime.datetime.now(pytz.timezone(str(timezone)))
+        except:
+            timezone = datetime.datetime.now(ZoneInfo(str(timezone)))
+        timezone = timezone.utcoffset().total_seconds()/60/60
+        carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data
+
+        if latitude < 0:
+            if date.month <= 3 or date.month >= 9:
+                season = 'SUMMER'
+            else:
+                season = 'WINTER'
+        else:
+            if date.month <= 3 or date.month >= 9:
+                season = 'WINTER'
+            else:
+                season = 'SUMMER'
+        try:
+            wavelength,intensity = spectrum_tilt(surface_air_pressure/100,0,air_temperature,relative_humidity,season,air_temperature,formaldehyde,methane,carbon_monoxide,nitric_acid,nitrogen_dioxide,oz,sulfur_dioxide,carbon_di,'S&F_RURAL',TAU550,water_vapour,date.year,date.month,date.day,date.hour,latitude,longitude,timezone)
+        except:
+            wavelength = 0
+            intensity = 0
+        return wavelength, intensity
     
     def generate_spectrum_pristine_standalone(latitude, longitude, date, data):
         tf = TimezoneFinder()
@@ -179,6 +212,34 @@ class Atmosphere():
             wavelength,intensity = spectrum_pristine(surface_air_pressure/100,0,air_temperature,relative_humidity,season,air_temperature,'S&F_RURAL',date.year,date.month,date.day,date.hour,latitude,longitude,timezone) 
         except:
             wavelength = 0 
+            intensity = 0
+        return wavelength, intensity
+
+    def generate_spectrum_pristine_standalone_tilt(latitude, longitude, date, data):
+        tf = TimezoneFinder()
+        lat = latitude
+        long = longitude
+        timezone = tf.timezone_at(lat=lat,lng=long)
+        try:
+            timezone = datetime.datetime.now(pytz.timezone(str(timezone)))
+        except:
+            timezone = datetime.datetime.now(ZoneInfo(str(timezone)))
+        timezone = timezone.utcoffset().total_seconds()/60/60
+        carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data
+        if latitude < 0:
+            if date.month <= 3 or date.month >= 9:
+                season = 'SUMMER'
+            else:
+                season = 'WINTER'
+        else:
+            if date.month <= 3 or date.month >= 9:
+                season = 'WINTER'
+            else:
+                season = 'SUMMER'
+        try:
+            wavelength,intensity = spectrum_pristine_tilt(surface_air_pressure/100,0,air_temperature,relative_humidity,season,air_temperature,'S&F_RURAL',date.year,date.month,date.day,date.hour,latitude,longitude,timezone)
+        except:
+            wavelength = 0
             intensity = 0
         return wavelength, intensity
 
@@ -281,10 +342,30 @@ def fetch_wavlength_intensity(data):
     idx = data[2]
     date = data[3]
     data = data[4]
-    #lock.acquire()
     wavelength, intensity = Atmosphere.generate_spectrum_standalone(latitude,longitude,date,data)
-    os.system('clear')
-    #lock.release()
+    try:
+        wavelength = wavelength*1e-9
+        intensity = intensity*1e-9
+    except:
+        wavelength = 0
+        intensity = 0
+    Power = np.sum(np.asarray(intensity))
+    df = pd.DataFrame()
+    df['Wavelength'] = wavelength
+    df['Intensity'] = intensity
+    #header = 'Wavelength\tIntensity'
+    dir = os.path.join(os.getcwd(),'Temp','Spectrums','temp'+str(idx)+'.csv')
+    df.to_csv(dir)
+    #np.savetxt(dir, data, delimiter='\t',header=header)
+    return Power
+
+def fetch_wavlength_intensity_tilt(data):
+    longitude = data[0]
+    latitude = data[1]
+    idx = data[2]
+    date = data[3]
+    data = data[4]
+    wavelength, intensity = Atmosphere.generate_spectrum_standalone_tilt(latitude,longitude,date,data)
     try:
         wavelength = wavelength*1e-9
         intensity = intensity*1e-9
@@ -307,10 +388,30 @@ def fetch_wavlength_intensity_pristine(data):
     idx = data[2]
     date = data[3]
     data = data[4]
-    #lock.acquire()
     wavelength, intensity = Atmosphere.generate_spectrum_pristine_standalone(latitude,longitude,date,data)
-    os.system('clear')
-    #lock.release()
+    try:
+        wavelength = wavelength*1e-9
+        intensity = intensity*1e-9
+    except:
+        wavelength = 0
+        intensity = 0
+    Power = np.sum(np.asarray(intensity))
+    df = pd.DataFrame()
+    df['Wavelength'] = wavelength
+    df['Intensity'] = intensity
+    #header = 'Wavelength\tIntensity'
+    dir = os.path.join(os.getcwd(),'Temp','Spectrums','temp'+str(idx)+'.csv')
+    df.to_csv(dir)
+    #np.savetxt(dir, data, delimiter='\t',header=header)
+    return Power
+
+def fetch_wavlength_intensity_pristine_tilt(data):
+    longitude = data[0]
+    latitude = data[1]
+    idx = data[2]
+    date = data[3]
+    data = data[4]
+    wavelength, intensity = Atmosphere.generate_spectrum_pristine_standalone_tilt(latitude,longitude,date,data)
     try:
         wavelength = wavelength*1e-9
         intensity = intensity*1e-9
@@ -333,10 +434,7 @@ def fetch_wavlength_intensity_one_at_a_time(data):
     idx = data[2]
     date = data[3]
     data = data[4]
-    #lock.acquire()
     wavelength, intensity = Atmosphere.generate_spectrum_one_at_a_time(latitude,longitude,date,data)
-    #os.system('clear')
-    #lock.release()
     try:
         wavelength = wavelength*1e-9
         intensity = intensity*1e-9
@@ -353,17 +451,13 @@ def fetch_wavlength_intensity_one_at_a_time(data):
     #np.savetxt(dir, data, delimiter='\t',header=header)
     return Power
 
-
 def save_to_oghma_mp(data):
     longitude = data[0]
     latitude = data[1]
     idx = data[2]
     date = data[3]
     data = data[4]
-    lock.acquire()
     wavelength, intensity = Atmosphere.generate_spectrum_standalone(latitude,longitude,date,data)
-    lock.release()
-    os.system('clear')
     try:
         data = np.array([wavelength*1e-9,intensity*1e9]).T
     except:
@@ -388,10 +482,7 @@ def save_to_oghma_mp_pristine(data):
     idx = data[2]
     date = data[3]
     data = data[4]
-    lock.acquire()
     wavelength, intensity = Atmosphere.generate_spectrum_pristine_standalone(latitude,longitude,date,data)
-    lock.release()
-    os.system('clear')
     try:
         data = np.array([wavelength*1e-9,intensity*1e9]).T
     except:
@@ -416,7 +507,6 @@ def run_oghma(idx,name):
     G.save_job()
     G.run()
 
-
 def run_oghma_mp(G,idx,temp,name):
     G.create_job_json('TempDevice'+str(idx),name)
     G.modify_pm_json('virtual_spectra','light_spectra',"light_spectrum",category=['optical','light_sources','lights'],layer_name="segment",layer_number=0,value='temp'+str(idx))
@@ -434,7 +524,6 @@ def fetch_result_mp(idx,value):
     data = pd.read_json(file,typ='series')
     return data[value]
 
-
 def run_dates():
     start_date =  datetime.datetime(2019,1,1,12)
     end_date = datetime.datetime(2019,12,31,21)
@@ -451,6 +540,67 @@ def run_dates():
 
 def task(longitude,latitude,date):
         return Atmosphere(date.year,date.month,date.day,date.hour).get_location(longitude, latitude)
+
+def load_locs(data):
+    arg_longitudes = data[0]
+    arg_latitudes = data[1]
+    date = data[2]
+    dir = os.path.join(os.getcwd(), 'Climate Data', str(date.year), str(date.month), str(date.day), str(date.hour))
+    files = os.listdir(dir)
+    mins = [float(file.split('_')[-1][3:-4]) for file in files]
+    maxs = [float(file.split('_')[-2][3:]) for file in files]
+    files_path = [os.path.join(dir, file) for file in files]
+    data = [Atmosphere.load_image(path) for path in files_path]
+    data = [d[:, :, 0] / 255 * 3 for d in data]
+    data = [d * (maxs[idx] - mins[idx]) + mins[idx] for idx, d in enumerate(data)]
+    names = [file.split('_')[-len(file.split('_')):-2] for file in files]
+    names = ['_'.join(name) for name in names]
+    carbon_monoxide = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    sulfur_dioxide = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    nitric_acid = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    water_vapour = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    methane = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    TAU550 = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    formaldehyde = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    air_temperature = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    nitrogen_dioxide = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    ozone = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    carbon_dioxide = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    surface_air_pressure = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    relative_humidity = np.zeros((len(arg_latitudes), len(arg_longitudes)))
+    for idx in range(len(data)):
+        for i in range(len(arg_latitudes)):
+            for j in range(len(arg_longitudes)):
+                match names[idx]:
+                    case 'carbon_monoxide':  #
+                        carbon_monoxide[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'sulfur_dioxide':  #
+                        sulfur_dioxide[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'nitric_acid':  #
+                        nitric_acid[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'water_vapour':  #
+                        water_vapour[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'methane':  #
+                        methane[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'TAU550':  #
+                        TAU550[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'formaldehyde':  #
+                        formaldehyde[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'air_temperature':  #
+                        air_temperature[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'nitrogen_dioxide':  #
+                        nitrogen_dioxide[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'ozone':  #
+                        ozone[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'carbon_dioxide':
+                        carbon_dioxide[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'surface_air_pressure':  #
+                        surface_air_pressure[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+                    case 'relative_humidity':  #
+                        relative_humidity[i,j] = data[idx][arg_latitudes[i], arg_longitudes[j]]
+    gasses = [carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde,
+              air_temperature, nitrogen_dioxide, ozone, carbon_dioxide, surface_air_pressure, relative_humidity]
+    return gasses
 
 def load_loc(data):
     arg_longitude = data[0]
@@ -499,7 +649,6 @@ def load_loc(data):
     gasses = [carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, ozone, carbon_dioxide, surface_air_pressure, relative_humidity]
     return gasses
 
-
 def arg_lat_lon(longitude,latitude):
     data = pd.read_csv(os.path.join(os.getcwd(),'Location Lists','latlons.csv'))
     latitudes = data['latitudes'].dropna(axis=0).to_numpy()
@@ -509,20 +658,29 @@ def arg_lat_lon(longitude,latitude):
     arg_longitude = np.argmin(np.abs(longitude - longitudes))
     return arg_longitude, arg_latitude
 
+
+
 def write(data):
     idx = data[2]
     date = data[3]
     data_list = data[4]
     power = data[5]
     carbon_monoxide, sulfur_dioxide, nitric_acid, water_vapour, methane, TAU550, formaldehyde, air_temperature, nitrogen_dioxide, oz, carbon_di, surface_air_pressure,relative_humidity = data_list
-    pce,pmax,ff,voc,jsc = run_equivilent_circuit(idx,air_temperature+273.15)
+    pce,pmax,ff,voc,jsc = run_equivilent_circuit(idx,air_temperature,NOCT+273.15)
     return [date,pce,pmax,ff,voc,jsc,air_temperature,carbon_di,carbon_monoxide,formaldehyde,methane,nitric_acid,nitrogen_dioxide,oz,relative_humidity,sulfur_dioxide,surface_air_pressure,TAU550,water_vapour,power]
+
+def fetch_all(start_year,end_year,longitude,latitude):
+    arg_longitude, arg_latitude = arg_lat_lon(longitude, latitude)
+    start_date = datetime.datetime(start_year, 1, 1, 0)
+    end_date = datetime.datetime(end_year, 12, 31, 21)
+    dates = pd.date_range(start=start_date, end=end_date, freq='3H').to_pydatetime().tolist()
+    lo
 
 def run_dates_mp_SDM_pristine(name,start_year,end_year,longitude,latitude):
     arg_longitude, arg_latitude = arg_lat_lon(longitude,latitude)
-    start_date =  datetime.datetime(start_year,1,1,0)
-    end_date = datetime.datetime(end_year,12,31,21)
-    dates = pd.date_range(start=start_date, end=end_date,freq='3H').to_pydatetime().tolist()
+    start_date =  datetime.datetime(start_year,1,1,12)
+    end_date = datetime.datetime(end_year,12,31,12)
+    dates = pd.date_range(start=start_date, end=end_date,freq='24H').to_pydatetime().tolist()
     dates_it = [[arg_longitude,arg_latitude,date] for date in dates]
     #results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
     data_list = []
@@ -534,18 +692,68 @@ def run_dates_mp_SDM_pristine(name,start_year,end_year,longitude,latitude):
     power = pool.map(fetch_wavlength_intensity_pristine, data)
     for idx, i in enumerate(power):
         data[idx].append(i)
-    
     resutls_r = []
     results_r = pool.map(write,data)
     results = pd.DataFrame(data=results_r,columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour','Power'])
     results.to_csv(os.path.join(os.getcwd(),'Results',name+'.csv'))
     return
 
+def run_dates_mp_SDM_pristine_tilt(name, start_year, end_year, longitude, latitude):
+    arg_longitude, arg_latitude = arg_lat_lon(longitude, latitude)
+    start_date = datetime.datetime(start_year, 1, 1, 12)
+    end_date = datetime.datetime(end_year, 12, 31, 12)
+    dates = pd.date_range(start=start_date, end=end_date, freq='3H').to_pydatetime().tolist()
+    dates_it = [[arg_longitude, arg_latitude, date] for date in dates]
+    # results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
+    data_list = []
+    pool = multiprocessing.Pool(processes=100)
+    data_list = pool.map(load_loc, dates_it)
+
+    data = [[longitude, latitude, idx, date, data_list[idx]] for idx, date in enumerate(dates)]
+
+    power = pool.map(fetch_wavlength_intensity_pristine_tilt, data)
+    for idx, i in enumerate(power):
+        data[idx].append(i)
+
+    resutls_r = []
+    results_r = pool.map(write, data)
+    results = pd.DataFrame(data=results_r,
+                           columns=['Date', 'PCE', 'Pmax', 'FF', 'Voc', 'Jsc', 'Air Temperature', 'Carbon Dioxide',
+                                    'Carbon Monoxide', 'Formaldehyde', 'Methane', 'Nitric Acid', 'Nitrogen Dioxide',
+                                    'Ozone', 'Relative Humididity', 'Sulfur Dioxide', 'Air Pressure', 'TAU550',
+                                    'Water Vapour', 'Power'])
+    results.to_csv(os.path.join(os.getcwd(), 'Results', name + '.csv'))
+    return
+
+
+
 def run_dates_mp_SDM(name,start_year,end_year,longitude,latitude):
+    arg_longitude, arg_latitude = arg_lat_lon(longitude,latitude)
+    start_date =  datetime.datetime(start_year,1,1,12)
+    end_date = datetime.datetime(end_year,16,31,12)
+    dates = pd.date_range(start=start_date, end=end_date,freq='24H').to_pydatetime().tolist()
+    dates_it = [[arg_longitude,arg_latitude,date] for date in dates]
+    #results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
+    data_list = []
+    pool = multiprocessing.Pool(processes=100)
+    data_list = pool.map(load_loc,dates_it)
+    #data_list = [load_loc(date) for date in dates_it]
+    data = [[longitude,latitude,idx,date,data_list[idx]] for idx,date in enumerate(dates)]
+    power = []
+    power = pool.map(fetch_wavlength_intensity,data)
+    for idx, i in enumerate(power):
+        data[idx].append(i)
+    #resutls_r = []
+    results_r = pool.map(write,data)
+    results = pd.DataFrame(data=results_r,columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour','Power'])
+    results.to_csv(os.path.join(os.getcwd(),'Results',name+'.csv'))
+    return
+
+def run_dates_mp_SDM_Tilt_Angle(name,start_year,end_year,longitude,latitude):
 
     arg_longitude, arg_latitude = arg_lat_lon(longitude,latitude)
-    start_date =  datetime.datetime(start_year,1,1,0)
-    end_date = datetime.datetime(end_year,12,31,21)
+    start_date =  datetime.datetime(start_year,1,1,12)
+    end_date = datetime.datetime(end_year,12,31,12)
     dates = pd.date_range(start=start_date, end=end_date,freq='3H').to_pydatetime().tolist()
     dates_it = [[arg_longitude,arg_latitude,date] for date in dates]
     #results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
@@ -555,7 +763,7 @@ def run_dates_mp_SDM(name,start_year,end_year,longitude,latitude):
 
     data = [[longitude,latitude,idx,date,data_list[idx]] for idx,date in enumerate(dates)]
     power = []
-    power = pool.map(fetch_wavlength_intensity,data)
+    power = pool.map(fetch_wavlength_intensity_tilt,data)
     for idx, i in enumerate(power):
         data[idx].append(i)
     resutls_r = []
@@ -567,8 +775,8 @@ def run_dates_mp_SDM(name,start_year,end_year,longitude,latitude):
 
 def run_dates_mp_SDM_one_at_a_time(name,start_year,end_year,longitude,latitude):
     arg_longitude, arg_latitude = arg_lat_lon(longitude,latitude)
-    start_date =  datetime.datetime(start_year,1,1,0)
-    end_date = datetime.datetime(end_year,12,31,21)
+    start_date =  datetime.datetime(start_year,1,1,12)
+    end_date = datetime.datetime(end_year,12,31,12)
     dates = pd.date_range(start=start_date, end=end_date,freq='3H').to_pydatetime().tolist()
     dates_it = [[arg_longitude,arg_latitude,date] for date in dates]
     #results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
@@ -692,35 +900,42 @@ def run_dates_mp_pristine(name,year,longitude,latitude):
 def arleady_exists(f):
     return os.path.exists(os.path.join(os.getcwd(),'Results',f+'.csv'))
 
+global NOCT
 if __name__ == '__main__':
-    #global lock
-    #lock = multiprocessing.Lock()
-    files = ['CaliforniaLocs.csv']
+    files = ['EuropeNAmerica_LatitudeLine.csv']#['Caribbean.csv','EuropeNAmerica_LatitudeLine.csv','EuropeNAmerica_LongitudeLine.csv']
+    noct = [40]
     for file in files:
-        locs = pd.read_csv(os.path.join(os.getcwd(),'Location Lists',file))
-        years = np.arange(2020,2021)
-        if file == 'China_LowRes.csv':
-                years = np.arange(2007,2010)
-        rpbar = tqdm.tqdm(total=len(years)*len(locs)*2,mininterval=0)
+        locs = pd.read_csv(os.path.join(os.getcwd(), 'Location Lists', file))
+        years = np.arange(2020, 2021)
+
+        if file == 'Beijing.csv':
+            years = np.arange(2003,2021)
+
+        rpbar = tqdm.tqdm(total=len(years) * len(locs) * 2, mininterval=0)
         for year in years:
-            for i in range(1,len(locs)):
-                name = locs.loc[i]['Name']
-                state = locs.loc[i]['State']
-                lat = float(locs.loc[i]['Latitude'])
-                lon = float(locs.loc[i]['Longitude'])
-                f = 'PERC_' + str(name) + '_' + str(state) + '_' + str(year)
-                fp = 'PERC_' + str(name) + '_' + str(state) + '_pristine_' + str(year)
-                file_status_f = arleady_exists(f)
-                file_status_fp = arleady_exists(fp)
+            for n in noct:
+                NOCT = n
+                for i in range(len(locs)):
+                    name = locs.loc[i]['Name']
+                    state = locs.loc[i]['State']
+                    lat = float(locs.loc[i]['Latitude'])
+                    lon = float(locs.loc[i]['Longitude'])
+                    f = 'PERC_' + str(name) + '_' + str(state) + '_tilt_angle_' + '_NOCT_' + str(n) + '_' + str(year)
+                    fp = 'FullRes_PERC_' + str(name) + '_' + str(state) + '_pristine_tilt_angle_' + '_NOCT_' + str(n)+ '_' + str(year)
+                    file_status_f = arleady_exists(f)
+                    file_status_fp = arleady_exists(fp)
 
-                #if file_status_f == False:
-                run_dates_mp_SDM_one_at_a_time(f,year,year,lon,lat)
-                rpbar.update(1)
-                #else:
-                #    rpbar.update(1)
+                    if file_status_f == False:
+                        run_dates_mp_SDM_Tilt_Angle(f, year, year, lon, lat)
+                        rpbar.update(1)
+                    #run_dates_mp_SDM_one_at_a_time(f, year, year, lon, lat)
+                    #rpbar.update(1)
+                    else:
+                        rpbar.update(1)
 
-                #if file_status_fp == False:
-                #    run_dates_mp_SDM_pristine(fp,year,year,lon,lat)
-                #    rpbar.update(1)
-                #else:
-                #    rpbar.update(1)
+                    if file_status_fp == False:
+                        run_dates_mp_SDM_pristine_tilt(fp,year,year,lon,lat)
+                        rpbar.update(1)
+                    else:
+                        rpbar.update(1)
+

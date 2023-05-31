@@ -1,12 +1,10 @@
 import os
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from scipy.special import lambertw
 import scipy.constants as const
 from pvlib.pvsystem import i_from_v
 from scipy.optimize import curve_fit
-import tqdm
+
 
 class cell:
     def __init__(self):
@@ -23,7 +21,6 @@ class cell:
     def load_sepectrum(self, dir_f, scaling=1):
         f = os.path.join(os.getcwd(), 'Spectrums', dir_f+'.csv')
         df = pd.read_csv(f)
-        print(df)
         wavelength = df['Wavelength'].to_numpy()
         intensity = df['Intensity'].to_numpy()
         #x = np.arange(wavelength[0],wavelength[-1]+0.5,0.5)
@@ -31,7 +28,7 @@ class cell:
         #i = np.interp(x,wavelength,intensity)
         half = np.argwhere((wavelength>=280)&(wavelength<400))
         one = np.argwhere((wavelength>=400)&(wavelength<1700))
-        five = np.argwhere((wavelength>=1700)&(wavelength<4000))
+        #five = np.argwhere((wavelength>=1700)&(wavelength<4000))
 
         i_half = intensity[half].ravel()
         x_half = wavelength[half].ravel()
@@ -41,14 +38,14 @@ class cell:
         x_one_half = np.around(np.arange(x_one[0],x_one[-1]+0.5,0.5),1).ravel()
         i_one_half = np.interp(x_one_half,x_one,i_one)/2
 
-        i_five = intensity[five].ravel()
-        x_five = wavelength[five].ravel()
-        x_five_half = np.around(np.arange(x_five[0],x_five[-1]+0.5,0.5),1).ravel()
-        i_five_half = np.interp(x_five_half,x_five,i_five)/10
+        # i_five = intensity[five].ravel()
+        # x_five = wavelength[five].ravel()
+        # x_five_half = np.around(np.arange(x_five[0],x_five[-1]+0.5,0.5),1).ravel()
+        # i_five_half = np.interp(x_five_half,x_five,i_five)/10
         
 
-        wavelength = np.concatenate((x_half,x_one_half,x_five_half))
-        intensity = np.concatenate((i_half,i_one_half,i_five_half))
+        wavelength = np.concatenate((x_half,x_one_half))#,x_five_half))
+        intensity = np.concatenate((i_half,i_one_half))#,i_five_half))
 
         self.spectrum = [wavelength, (intensity * scaling)* 100e-9] 
         self.incoming_power = np.cumsum((intensity * scaling))[-1]/10
@@ -66,7 +63,7 @@ class cell:
         #i = np.interp(x,wavelength,intensity)
         half = np.argwhere((wavelength>=280)&(wavelength<400))
         one = np.argwhere((wavelength>=400)&(wavelength<1700))
-        five = np.argwhere((wavelength>=1700)&(wavelength<4000))
+        #five = np.argwhere((wavelength>=1700)&(wavelength<4000))
 
         i_half = intensity[half].ravel()
         x_half = wavelength[half].ravel()
@@ -76,15 +73,14 @@ class cell:
         x_one_half = np.around(np.arange(x_one[0],x_one[-1]+0.5,0.5),1).ravel()
         i_one_half = np.interp(x_one_half,x_one,i_one)/2
 
-        i_five = intensity[five].ravel()
-        x_five = wavelength[five].ravel()
-        x_five_half = np.around(np.arange(x_five[0],x_five[-1]+0.5,0.5),1).ravel()
-        i_five_half = np.interp(x_five_half,x_five,i_five)/10
+        # i_five = intensity[five].ravel()
+        # x_five = wavelength[five].ravel()
+        # x_five_half = np.around(np.arange(x_five[0],x_five[-1]+0.5,0.5),1).ravel()
+        # i_five_half = np.interp(x_five_half,x_five,i_five)/10
     
 
-        wavelength = np.concatenate((x_half,x_one_half,x_five_half))
-        intensity = np.concatenate((i_half,i_one_half,i_five_half))
-
+        wavelength = np.concatenate((x_half,x_one_half))#,x_five_half))
+        intensity = np.concatenate((i_half,i_one_half))#,i_five_half))
         self.spectrum = [wavelength, (intensity * scaling)* 100e-9] 
         self.incoming_power = np.cumsum((intensity * scaling))[-1]/10
         return True
@@ -179,8 +175,10 @@ class cell:
         self.average_ideality = ideality
 
 
-    def equivilent_cuircuit_jv(self, temperature=293.15):
-        v = np.linspace(0, 1, 1000)
+    def equivilent_cuircuit_jv(self, air_temperature=293.15, NOCT=0):
+        v = np.linspace(0, 0.7, 100)
+        temperature = (air_temperature-273.15) + ((((NOCT-273.15) - 20)/ 80) * self.incoming_power)
+        temperature = temperature + 273.15
         nNsVth = self.average_ideality * 1 * (const.k * temperature/const.e)
         i = i_from_v(resistance_shunt=self.shunt_resistance,resistance_series=self.serise_resistance,nNsVth=nNsVth,voltage=v,saturation_current=self.dark_satuartion, photocurrent=self.photogenerated)
         self.jv_experiment = [v,i]
@@ -211,7 +209,7 @@ class cell:
         self.Efficiency = (self.Jsc * self.Voc * self.FF)/self.incoming_power
         return
     
-def run_equivilent_circuit(idx,temperature):
+def run_equivilent_circuit(idx,temperature,NOCT):
     Perc = cell()
     Perc.load_eqe('PERC')
     Perc.load_jv('PERC-1')
@@ -222,18 +220,12 @@ def run_equivilent_circuit(idx,temperature):
         return 0, 0, 0, 0, 0
     Perc.calculate_photogenerated()
     Perc.fit_func()
-    Perc.equivilent_cuircuit_jv(temperature=temperature)
+    Perc.equivilent_cuircuit_jv(air_temperature=temperature,NOCT=NOCT)
     Perc.calculate_power()
     return Perc.Efficiency, Perc.Pmax, Perc.FF, Perc.Voc, Perc.Jsc
 
         
 if __name__ == '__main__':
-    # pce = np.zeros(len(range(2900)))
-    # for idx in tqdm.tqdm(range(2900)):
-    #     pce[idx],temp1,temp2,temp3,temp4 = run_equivilent_circuit(idx)
-    # plt.plot(pce)
-    # plt.show()
-
     Perc = cell()
     Perc.load_eqe('PERC')
     Perc.load_jv('PERC-1')
@@ -243,14 +235,9 @@ if __name__ == '__main__':
     Perc.load_sepectrum('AM1.5G',scaling=1)
     Perc.calculate_photogenerated()
     Perc.fit_func()
-    Perc.equivilent_cuircuit_jv()
+    Perc.equivilent_cuircuit_jv(air_temperature=293.15,NOCT=40+273.15)
     Perc.calculate_power()
     plt.plot(Perc.jv_experiment[0],Perc.jv_experiment[1])
-    plt.plot(Perc.jv[0],Perc.jv[1])
-    print(Perc.incoming_power)
-    print(Perc.Pmax)
-    print(Perc.Efficiency)
-    #plt.xlim(left=0)
-    plt.ylim(bottom=0,top=100)
+    #plt.plot(Perc.jv[0],Perc.jv[1])
     plt.show()
 

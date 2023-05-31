@@ -22,17 +22,16 @@ xp = np.linspace(x[0]-1,x[-1]+1,10000)
 idx2020 = np.argwhere(x == 2020)
 
 plt.scatter(x,y1,color='tab:blue')
-plt.scatter(x[idx2020],y1[idx2020],color='tab:blue',edgecolors='black',linewidths=2.5)
+#plt.scatter(x[idx2020],y1[idx2020],color='tab:blue',edgecolors='black',linewidths=2.5)
 
-plt.plot(xp,p1(xp),linestyle=':',color='tab:blue')
 
 plt.ylim(bottom=0,top=13000)
 plt.ylabel('Fires Reported')
 plt.twinx()
 
 plt.scatter(x,y2,c='tab:orange')
-plt.scatter(x[idx2020],y2[idx2020],c='tab:orange',edgecolors='black',linewidths=2.5)
-plt.plot(xp,p2(xp),linestyle=':',color='tab:orange')
+#plt.scatter(x[idx2020],y2[idx2020],c='tab:orange',edgecolors='black',linewidths=2.5)
+#plt.plot(xp,p2(xp),linestyle=':',color='tab:orange')
 
 plt.ylabel('Area Burned (Km$^2$)')
 plt.ylim(bottom=0)

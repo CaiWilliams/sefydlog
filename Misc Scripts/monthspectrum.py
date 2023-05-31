@@ -79,7 +79,7 @@ def run(start_date,end_date):
 
 
 if __name__ == '__main__':
-    years = np.arange(2015,2015)
+    years = np.arange(2022,2015)
     start_date =  datetime.datetime(2020,12,30,0)
     end_date = datetime.datetime(2020,12,31,21)
     run(start_date,end_date)
