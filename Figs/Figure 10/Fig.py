@@ -98,7 +98,8 @@ def spacial(dir, start_date, end_date, step):
     dates_idx = np.searchsorted(dates_of_data_list,dates)
 
     proj = ccrs.PlateCarree(central_longitude=0)
-    l = np.arange(-150,0.5,0.5)
+    l = np.arange(-50,-9.5,0.5)
+    print(np.mean(data[:,:, dates_idx]))
     cs = ax.contourf(longitudes, latitudes, np.mean(data[:, :, dates_idx],axis=2), transform=proj, levels=l, cmap='inferno_r')
     ax.coastlines(color='white')
     ax.plot(116.387985, 39.996353, transform=ccrs.PlateCarree(), marker='o', markersize=3, c='white')
@@ -110,8 +111,8 @@ def spacial(dir, start_date, end_date, step):
     plt.tight_layout()
     return
 
-for i in np.arange(3,9,1):
-    spacial('Beijing','1/01/200'+str(i),'31/12/200'+str(i),24)
-    plt.savefig('Figure_10_cbar_20'+str(i)+'.png', dpi=600)
+for i in np.arange(10,11,1):
+    spacial('Beijing','1/01/20'+str(i),'31/12/20'+str(i),24)
+    plt.savefig('Figure_102_cbar_20'+str(i)+'.png', dpi=600)
 #plt.savefig('Caribbean_Spacial_2020.png',dpi=600)
 #plt.savefig('California_Spacial.svg')

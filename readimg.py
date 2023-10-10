@@ -700,9 +700,9 @@ def run_dates_mp_SDM_pristine(name,start_year,end_year,longitude,latitude):
 
 def run_dates_mp_SDM_pristine_tilt(name, start_year, end_year, longitude, latitude):
     arg_longitude, arg_latitude = arg_lat_lon(longitude, latitude)
-    start_date = datetime.datetime(start_year, 1, 1, 12)
-    end_date = datetime.datetime(end_year, 12, 31, 12)
-    dates = pd.date_range(start=start_date, end=end_date, freq='3H').to_pydatetime().tolist()
+    start_date = datetime.datetime(year, 1, 1, 12)
+    end_date = datetime.datetime(year, 12, 31, 21)
+    dates = pd.date_range(start=start_date, end=end_date, freq='24H').to_pydatetime().tolist()
     dates_it = [[arg_longitude, arg_latitude, date] for date in dates]
     # results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
     data_list = []
@@ -729,8 +729,8 @@ def run_dates_mp_SDM_pristine_tilt(name, start_year, end_year, longitude, latitu
 
 def run_dates_mp_SDM(name,start_year,end_year,longitude,latitude):
     arg_longitude, arg_latitude = arg_lat_lon(longitude,latitude)
-    start_date =  datetime.datetime(start_year,1,1,12)
-    end_date = datetime.datetime(end_year,16,31,12)
+    start_date = datetime.datetime(year, 1, 1, 12)
+    end_date = datetime.datetime(year, 12, 31, 21)
     dates = pd.date_range(start=start_date, end=end_date,freq='24H').to_pydatetime().tolist()
     dates_it = [[arg_longitude,arg_latitude,date] for date in dates]
     #results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
@@ -752,9 +752,9 @@ def run_dates_mp_SDM(name,start_year,end_year,longitude,latitude):
 def run_dates_mp_SDM_Tilt_Angle(name,start_year,end_year,longitude,latitude):
 
     arg_longitude, arg_latitude = arg_lat_lon(longitude,latitude)
-    start_date =  datetime.datetime(start_year,1,1,12)
-    end_date = datetime.datetime(end_year,12,31,12)
-    dates = pd.date_range(start=start_date, end=end_date,freq='3H').to_pydatetime().tolist()
+    start_date = datetime.datetime(year, 1, 1, 12)
+    end_date = datetime.datetime(year, 12, 31, 21)
+    dates = pd.date_range(start=start_date, end=end_date,freq='24H').to_pydatetime().tolist()
     dates_it = [[arg_longitude,arg_latitude,date] for date in dates]
     #results = pd.DataFrame(columns=['Date','PCE','Pmax','FF','Voc','Jsc','Air Temperature','Carbon Dioxide','Carbon Monoxide','Formaldehyde','Methane','Nitric Acid','Nitrogen Dioxide','Ozone','Relative Humididity','Sulfur Dioxide','Air Pressure','TAU550','Water Vapour'])
     data_list = []
@@ -902,7 +902,7 @@ def arleady_exists(f):
 
 global NOCT
 if __name__ == '__main__':
-    files = ['EuropeNAmerica_LatitudeLine.csv']#['Caribbean.csv','EuropeNAmerica_LatitudeLine.csv','EuropeNAmerica_LongitudeLine.csv']
+    files = ['California.csv']#,'EuropeNAmerica_LongitudeLine.csv']
     noct = [40]
     for file in files:
         locs = pd.read_csv(os.path.join(os.getcwd(), 'Location Lists', file))
@@ -911,7 +911,7 @@ if __name__ == '__main__':
         if file == 'Beijing.csv':
             years = np.arange(2003,2021)
 
-        rpbar = tqdm.tqdm(total=len(years) * len(locs) * 2, mininterval=0)
+        rpbar = tqdm.tqdm(total=len(locs) * 2, mininterval=0)
         for year in years:
             for n in noct:
                 NOCT = n
@@ -920,8 +920,8 @@ if __name__ == '__main__':
                     state = locs.loc[i]['State']
                     lat = float(locs.loc[i]['Latitude'])
                     lon = float(locs.loc[i]['Longitude'])
-                    f = 'PERC_' + str(name) + '_' + str(state) + '_tilt_angle_' + '_NOCT_' + str(n) + '_' + str(year)
-                    fp = 'FullRes_PERC_' + str(name) + '_' + str(state) + '_pristine_tilt_angle_' + '_NOCT_' + str(n)+ '_' + str(year)
+                    f = 'FullRes_PERC2_' + str(name) + '_' + str(state) + '_tilt_angle_' + '_NOCT_' + str(n) + '_' + str(year)
+                    fp = 'FullRes_PERC2_' + str(name) + '_' + str(state) + '_pristine_tilt_angle_' + '_NOCT_' + str(n)+ '_' + str(year)
                     file_status_f = arleady_exists(f)
                     file_status_fp = arleady_exists(fp)
 

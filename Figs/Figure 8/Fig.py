@@ -118,26 +118,26 @@ ax0.axhspan(ymin=10,ymax=15,xmin=-100,xmax=0,facecolor='tab:blue',alpha=0.25)
 ax0.axhspan(ymin=15,ymax=20,xmin=-100,xmax=0,facecolor='tab:orange',alpha=0.25)
 ax0.axhspan(ymin=20,ymax=25,xmin=-100,xmax=0,facecolor='tab:green',alpha=0.25)
 
-ax0.add_patch(mpatches.Rectangle(xy=[0,25],width=-100,height=-5,facecolor='tab:blue',alpha=0.25,transform=ccrs.PlateCarree()))
-ax0.add_patch(mpatches.Rectangle(xy=[0,20],width=-100,height=-5,facecolor='tab:orange',alpha=0.25,transform=ccrs.PlateCarree()))
-ax0.add_patch(mpatches.Rectangle(xy=[0,15],width=-100,height=-5,facecolor='tab:green',alpha=0.25,transform=ccrs.PlateCarree()))
+#ax0.add_patch(mpatches.Rectangle(xy=[0,25],width=-100,height=-5,facecolor='tab:blue',alpha=0.25,transform=ccrs.PlateCarree()))
+#ax0.add_patch(mpatches.Rectangle(xy=[0,20],width=-100,height=-5,facecolor='tab:orange',alpha=0.25,transform=ccrs.PlateCarree()))
+#ax0.add_patch(mpatches.Rectangle(xy=[0,15],width=-100,height=-5,facecolor='tab:green',alpha=0.25,transform=ccrs.PlateCarree()))
 
 ax1 = fig.add_subplot(gs[10:,:])
 
-longitudes_unique,mean_lon,std_lon = spacial_Long('Caribbean','12/06/2020','24/06/2020',24,10,15)
-ax1.plot(longitudes_unique, mean_lon)
+#longitudes_unique,mean_lon,std_lon = spacial_Long('Caribbean','12/06/2020','24/06/2020',24,10,15)
+#ax1.plot(longitudes_unique, mean_lon)
 
 #ax1.fill_between(longitudes_unique, mean_lon - std_lon, mean_lon + std_lon, alpha=0.25)
 
-longitudes_unique,mean_lon,std_lon = spacial_Long('Caribbean','12/06/2020','24/06/2020',24,15,20)
-ax1.plot(longitudes_unique, mean_lon)
+#longitudes_unique,mean_lon,std_lon = spacial_Long('Caribbean','12/06/2020','24/06/2020',24,15,20)
+#ax1.plot(longitudes_unique, mean_lon)
 
 #ax1.fill_between(longitudes_unique, mean_lon - std_lon, mean_lon + std_lon, alpha=0.25)
 
-longitudes_unique,mean_lon,std_lon = spacial_Long('Caribbean','12/06/2020','24/06/2020',24,20,25)
+longitudes_unique,mean_lon,std_lon = spacial_Long('Caribbean','12/06/2020','24/06/2020',24,10,25)
 ax1.plot(longitudes_unique, mean_lon)
 ax1.set_xlim(left=-100,right=0)
-#ax1.fill_between(longitudes_unique, mean_lon - std_lon, mean_lon + std_lon, alpha=0.25)
+ax1.fill_between(longitudes_unique, mean_lon - std_lon, mean_lon + std_lon, alpha=0.25)
 
 
 ax1.set_ylim(top=-5, bottom=-40)

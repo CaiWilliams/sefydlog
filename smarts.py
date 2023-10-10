@@ -417,10 +417,10 @@ def spectrum_pristine(surface_pressure, altitude, site_temp, relative_humidity, 
     # A = abledo(20, tilt = 1, albdg=20, surface_angle=37, surface_azimuth=90)
     B = B.add_abledo(A)
 
-    A = spectral_range(300, 1200, 1, 1367.0)
+    A = spectral_range(280, 1200, 1, 1367.0)
     B = B.add_spectral_range(A)
 
-    A = print_output(2, wavelength_min=300, wavelength_max=1200, interval=2, num_output_variabels=4,
+    A = print_output(2, wavelength_min=280, wavelength_max=1200, interval=2, num_output_variabels=4,
                      output_variables=[8, 9, 10, 30])
     B = B.add_print(A)
 

@@ -34,8 +34,8 @@ def calc_multiyear(locations, start_date, end_date,noct):
             #pristine_dir = 'PERC_'+location+'_pristine_'+str(year)
             #polluted_dir = 'PERC_'+location+'_'+str(year)
 
-            pristine_dir = 'FullRes_PERC_' + location + '_pristine_tilt_angle__NOCT_' + str(noct) + '_' + str(year)
-            polluted_dir = 'FullRes_PERC_' + location + '_tilt_angle__NOCT_' + str(noct) + '_' + str(year)
+            pristine_dir = 'PERC_' + location + '_pristine_tilt_angle__NOCT_' + str(noct) + '_' + str(year)
+            polluted_dir = 'PERC_' + location + '_tilt_angle__NOCT_' + str(noct) + '_' + str(year)
 
             pristine_df = split_date(fetch_df(pristine_dir))
             polluted_df = split_date(fetch_df(polluted_dir))
@@ -62,9 +62,9 @@ def spacial(dir, start_date, end_date, step, lat, lon):
 
     dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'Location Lists',dir+'.csv')
     subfiles = pd.read_csv(dir)
+    print(subfiles)
     subfiles = subfiles[subfiles['Latitude'] == lat]
     subfiles = subfiles[subfiles['Longitude'] == lon]
-    print(subfiles['Name'].iloc[0])
     print(subfiles)
     subfiles_names = [subfiles['Name'].iloc[0] +'_'+ subfiles['State'].iloc[0]]
 
@@ -125,7 +125,7 @@ def spacial(dir, start_date, end_date, step, lat, lon):
     # cbar = fig.colorbar(cs,cax=cbar_ax,orientation='vertical',label='Electrical Power Loss (Wm$^{-2}$)',ticks=[0,-10,-20,-30,-40,-50])
     return
  
-spacial('Caribbean','12/06/2020','24/06/2020',3,21.75,-97.5)
+spacial('EuropeNAmerica_LatitudeLine','23/05/2008','2/06/2008',24,51.75,0)
 plt.show()
 #plt.savefig('Figure_7.png',dpi=600)
 #plt.savefig('California_Spacial.svg')

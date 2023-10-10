@@ -10,6 +10,8 @@ import numpy as np
 import os
 from scipy.interpolate import interp2d
 import datetime as dt
+from scipy import stats
+import matplotlib.colors as colors
 
 def fetch_df(name):
     file = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'Results',name+'.csv')
@@ -41,7 +43,7 @@ def calc_multiyear(locations, start_date, end_date,noct):
             polluted_df = split_date(fetch_df(polluted_dir))
 
             polluted_df['Energy_Loss'] = (((polluted_df['Pmax']*10)) - (pristine_df['Pmax']*10)) #/ (pristine_df['Power'] * 1e9) * 100
-            polluted_df['Energy_Loss'] = polluted_df['Energy_Loss'].clip(upper=0)
+            polluted_df['Energy_Loss'] = polluted_df['Energy_Loss']#.clip(upper=0)
 
             polluted.append(polluted_df)
         polluted = pd.concat(polluted).fillna(0)
@@ -100,29 +102,73 @@ def spacial(dir, start_date, end_date, step):
     dates_of_data_list = dates_of_data.values.ravel()
     dates_idx = np.searchsorted(dates_of_data_list,dates)
 
-    loss = np.zeros(len(dates_idx))
-    for i in range(len(dates_idx)):
-        loss[i] = np.mean(data[:,:,dates_idx[i]])
+    #loss = np.zeros((len(dates_idx)-365,-1))
+    std = np.zeros(len(dates_idx))
+    #mn = np.zeros(len(dates_idx))
+    #ma = np.zeros(len(dates_idx))
+    #b = np.arange(-100, 10.5, 0.5)
+    b = np.linspace(-100,10,50)
+    #loss = np.zeros((len(dates_idx) - 365, len(b)))
+    #for i in range(0, len(dates_idx)-365, 1095):
+    d = data[:, :, dates_idx]
+    d = np.reshape(d,(-1,1)).ravel()
+    avg = np.mean(d)
+    med = np.median(d)
+        #loss.append(np.histogram(data[:,:,dates_idx[i:i+7]],bins=b,range=(-100,0),density=True)[0])
+        #kern = stats.gaussian_kde(d)
+        #l = kern(b)
+    #plt.hist(d,b)
+    #plt.axvline(avg,color='green')
+    #plt.axvline(med,color='red')
+        #plt.plot(b,l,label=str(int(2003 + (i/365))))
+        #loss[i] = l
+        #std[i] = np.std(data[:,:,dates_idx[i]])
+        #mn[i] = np.min(data[:,:,dates_idx[i]])
+        #ma[i] = np.max(data[:,:,dates_idx[i]])
         #loss[i] = np.percentile(data[:,:,dates_idx[i]],30)
-    data = pd.DataFrame()
-    data['dates'] = dates
-    data['loss'] = loss
-    data = data.set_index('dates')
-    #ax = plt.plot(data.index,data['loss'])
-    data['loss'] = data['loss'].rolling('365d',center=True).mean()
-    print(data['loss'].iloc[0])
-    print(data['loss'].iloc[-1])
-    #data['loss'] = ((data['loss'].iloc[0]/data['loss']) - 1) * 100
-    ax = plt.plot(data.index,(data['loss']-data['loss'][0])/data['loss'][0])
-    #plt.ylabel('Electrical Power Loss Reduction (%)')
-    plt.axvline(dt.datetime(2014,1,1,0,0),color='tab:orange',linestyle='--')
-    plt.ylabel('Electrical Power Loss Rolling Mean (1 Year) (Wm$^{-2}$)')
-    plt.xlim(left=dt.datetime(2003,1,1,0,0),right=dt.datetime(2020,12,31,0,0))
-    #ax = plt.axvspan(dt.datetime(2008,8,8,0,0),dt.datetime(2008,8,24,0,0),color='tab:green',alpha=0.25)
-    return
- 
-spacial('Beijing','1/01/2014','31/12/2020',24)
-#plt.savefig('Figure_12.png',dpi=600)
-plt.show()
+    #loss = loss.T
+    #loss = loss[loss != 0]
+    #plt.pcolormesh(loss, cmap='inferno')
+    #locs,labels = plt.yticks()
+    #plt.yticks(range(len(b))[::10], np.arange(-100, 0, 2)[::10])
+    plt.ylabel('Density')
+    plt.ylim(bottom=0,top=0.04)
+    plt.xlabel('Electrical Power loss (Wm$^{-2}$)')
+    #plt.xticks(range(len(dates_idx)-365)[::730],np.arange(2003,2021,2))
+    #plt.colorbar(label='Density')
+    #plt.tight_layout()
+    #plt.show()
+
+    #c = np.argmax(counts)
+    #print(c)
+    counts, bins = np.histogram(d, bins=b)
+    c = np.argmax(counts)
+    return counts, bins, d
+
+counts_2010, bins_2010, d_2010 = spacial('Beijing', '1/01/2010', '31/12/2010', 24)
+counts_2020, bins_2020, d_2020 = spacial('Beijing', '1/01/2020', '31/12/2020', 24)
+
+kde_2010 = stats.gaussian_kde(d_2010)
+kde_2020 = stats.gaussian_kde(d_2020)
+xx = np.linspace(-130,30,10000)
+plt.plot(xx,kde_2010(xx))
+plt.plot(xx,kde_2020(xx))
+#plt.plot(bins_2020[:-1], counts_2020)
+#plt.plot(bins_2010[:-1], counts_2010)
+#plt.bar(bins_2020[:-1], counts_2020, width=2)
+#plt.show()
+
+# c_2010 = []
+# for i in range(2010,2021,10):
+#     counts, bins = spacial('Beijing', '1/01/'+str(i), '31/12/'+str(i), 24)
+#     c_2010 = counts
+    #plt.xlabel('Electrical Power loss (Wm$^{-2}$)')
+    #plt.ylabel('Count')
+    #plt.ylim(top=5000)
+    #plt.savefig('Figure_11_W_' + str(i) + '.png', dpi=600)
+    #plt.clf()
+#plt.legend()
+plt.savefig('Figure_11_kde.png',dpi=600)
+#plt.savefig('Figure_111_2003.png',dpi=600)
 #plt.savefig('Caribbean_Spacial_2020.png',dpi=600)
 #plt.savefig('California_Spacial.svg')

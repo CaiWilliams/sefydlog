@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import os
 import datetime as dt
+import scipy
 from math import cos, asin, sqrt
 
 def fetch_df(name):
@@ -34,16 +35,16 @@ def calc_distance(loc_lat,loc_lon,file):
     minidx = np.argmin(dist)
     return name[minidx] +'_'+ file
 
-def calc_multiyear(locations, start_date, end_date,noct):
+def calc_multiyear(locations, start_date, end_date,noct,device):
     years = np.arange(start_date.year,end_date.year+1)
     data = []
     for location in locations:
         polluted = []
         for year in years:
             #pristine_dir = 'PERC_' + location + '_pristine_' + str(year)
-            #polluted_dir = 'PERC_' + location + '_tilt_angle_' + str(year)
-            #pristine_dir = 'PERC_' + location + '_pristine_tilt_angle__NOCT_'+ str(noct) + '_' + str(year)
-            polluted_dir = 'FullRes_PERC_' + location + '_tilt_angle__NOCT_' + str(noct) + '_' + str(year)
+            #polluted_dir = 'PERC_' + location + '_' + str(year)
+            pristine_dir = 'FullRes_'+device+'_' + location + '_pristine_tilt_angle__NOCT_'+ str(noct) + '_' + str(year)
+            polluted_dir = 'FullRes_'+device+'_' + location + '_tilt_angle__NOCT_' + str(noct) + '_' + str(year)
 
             #pristine_df = split_date(fetch_df(pristine_dir))
             polluted_df = split_date(fetch_df(polluted_dir))
@@ -55,7 +56,7 @@ def calc_multiyear(locations, start_date, end_date,noct):
     polluted.sort_index()
     return polluted.index, data
 
-def calc_multiyear_power(locations, start_date, end_date,noct):
+def calc_multiyear_power(locations, start_date, end_date,noct,device):
     years = np.arange(start_date.year,end_date.year+1)
     data = []
     for location in locations:
@@ -63,10 +64,8 @@ def calc_multiyear_power(locations, start_date, end_date,noct):
         for year in years:
             #pristine_dir = 'PERC_' + location + '_pristine_' + str(year)
             #polluted_dir = 'PERC_' + location + '_' + str(year)
-            #pristine_dir = 'PERC_' + location + '_pristine_tilt_angle_' + str(year)
-            #polluted_dir = 'PERC_' + location + '_tilt_angle_' + str(year)
-            pristine_dir = 'FullRes_PERC_' + location + '_pristine_tilt_angle__NOCT_'+ str(noct) + '_' + str(year)
-            polluted_dir = 'FullRes_PERC_' + location + '_tilt_angle__NOCT_' + str(noct) + '_' + str(year)
+            pristine_dir = 'FullRes_'+device+'_' + location + '_pristine_tilt_angle__NOCT_'+ str(noct) + '_' + str(year)
+            polluted_dir = 'FullRes_'+device+'_' + location + '_tilt_angle__NOCT_' + str(noct) + '_' + str(year)
 
             pristine_df = split_date(fetch_df(pristine_dir))
             polluted_df = split_date(fetch_df(polluted_dir))
@@ -79,7 +78,7 @@ def calc_multiyear_power(locations, start_date, end_date,noct):
     polluted.sort_index()
     return polluted.index, data
 
-def spacial(dir, start_date, end_date, step, locs,noct):
+def spacial(dir, start_date, end_date, step, locs,noct,device):
 
     start_date = pd.to_datetime(start_date,dayfirst=True,)
     end_date = pd.to_datetime(end_date,dayfirst=True)
@@ -90,19 +89,18 @@ def spacial(dir, start_date, end_date, step, locs,noct):
 
     locs_dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())),'Location Lists',locs+'.csv')
     locs = pd.read_csv(locs_dir)
-    locs = locs.drop_duplicates(subset=['postcode'], keep='first')
-    locs_cap = locs['capacity'].to_numpy()
+    locs_cap = locs['Nameplate Capacity (MW)'].to_numpy()
     locs_cap_sum = np.sum(locs_cap)
-    locs_names = locs['postcode'].to_numpy()
-    locs_lat = locs['Lat_precise'].to_numpy()
-    locs_lon = locs['Long_precise'].to_numpy()
+    locs_names = locs['Name'].to_numpy()[::-1]
+    locs_lat = locs['Latitude'].to_numpy()
+    locs_lon = locs['Longitude'].to_numpy()
 
     dir = os.path.join(os.path.dirname(os.path.dirname(os.getcwd())), 'Location Lists', dir + '.csv')
-    subfiles = pd.read_csv(dir).drop_duplicates(subset=['postcode'], keep='first')
-    subfiles_names = [calc_distance(locs_lat[i],locs_lon[i],'Australia') for i in range(len(subfiles))]
+    subfiles = pd.read_csv(dir)
+    subfiles_names = [calc_distance(locs_lat[i],locs_lon[i],'California') for i in range(len(subfiles))]
 
-    dates_of_data,energy_loss = calc_multiyear(subfiles_names,start_date,end_date,noct)
-    d,power = calc_multiyear_power(subfiles_names,start_date,end_date,noct)
+    dates_of_data,energy_loss = calc_multiyear(subfiles_names,start_date,end_date,noct,device)
+    d,power = calc_multiyear_power(subfiles_names,start_date,end_date,noct,device)
 
     epoch = dt.datetime(1970,1,1)
     start_date_epoch = (start_date - epoch).total_seconds()
@@ -112,14 +110,14 @@ def spacial(dir, start_date, end_date, step, locs,noct):
     duration_hours = duration_minutes/60
     duration_days = duration_hours/24
 
-    # latitudes = subfiles['Latitude']
-    # longitudes = subfiles['Longitude']
-    #
-    # latitudes_unique = latitudes.unique()
-    # longitudes_unique = longitudes.unique()
-    #
-    # locs_lat_arg = [np.abs(latitudes_unique - lat).argmin() for lat in locs_lat][::-1]
-    # locs_lon_arg = [np.abs(longitudes_unique - lon).argmin() for lon in locs_lon][::-1]
+    latitudes = subfiles['Latitude']
+    longitudes = subfiles['Longitude']
+
+    latitudes_unique = latitudes.unique()
+    longitudes_unique = longitudes.unique()
+
+    locs_lat_arg = [np.abs(latitudes_unique - lat).argmin() for lat in locs_lat][::-1]
+    locs_lon_arg = [np.abs(longitudes_unique - lon).argmin() for lon in locs_lon][::-1]
 
 
     data = energy_loss
@@ -208,65 +206,44 @@ def plot_curtailment(gen):
 
 
 
-fig, ax2  = plt.subplots()
-#gen = plot_generation()
-#x,y = plot_curtailment(gen)
-#ax.stackplot(x,y,color='tab:gray')
-#ax.set_ylabel('Mean Daily Generation from Solar Assets (MW)')
-#ax2 = ax.twinx()
-#df = pd.read_csv('Weighted_Fractional_Cloud_Cover.csv')
-#df['Time'] = pd.to_datetime(df['Time'])
-#df = df.set_index('Time')
-#df = df.rolling(8*7,center=True,min_periods=1).mean()
-#plt.plot(df.index,df['Fractional Cloud Cover']*100,c='tab:green')
-#plt.ylabel('Capacity Weighted Fractional Cloud Cover (%)')
-#spacial('California_SolarFarms','1/1/2020','31/12/2020','24','California_SolarFarms',20)
-#spacial('California_SolarFarms','1/1/2020','31/12/2020','24','California_SolarFarms',40)
-#spacial('California_SolarFarms','1/1/2020','31/12/2020','24','California_SolarFarms',20)
-dates, data, power_cal = spacial('Australia_Solar_Distribution', '1/11/2019', '1/3/2020', '24', 'Australia_Solar_Distribution', 40)
-#plt.xticks(pd.to_datetime(['1/1/2020','1/5/2020','1/9/2020','1/1/2021'],dayfirst=True))
+fig, ax  = plt.subplots()
 
-print("Mean: ", np.mean(data-power_cal))
-print(np.std(data-power_cal))
-ax2.plot(dates, power_cal, c='tab:olive')
-ax2.plot(dates, data, c='tab:cyan')
-ax2.set_ylabel('Geographicaly Weighted Power Generation (Wm$^{-2}$)')
+#t.datetime(2020,8,16,12),dt.datetime(2020,11,12,12))
+dates, data, power_cal = spacial('California_SolarFarms','1/1/2020','31/12/2020','24','California_SolarFarms',40,'PERC2')
+n = data/power_cal * 100
+#print(np.mean(n))
+#n = (n - np.min(n))/(np.max(n)-np.min(n))
+print('PERC: ',np.mean(n))
+ax.plot(dates,n,c='tab:blue',label="PERC")
 
-power_cal = np.sum(power_cal)
-data = np.sum(data)
-x = (data - power_cal) / power_cal
-print(x * 100, '%')
-#ax2.set_ylim(top=160,bottom=0)
-#ax2.set_xlim(left=dt.datetime(2019,7,1,12),right=dt.datetime(2020,7,1,12))
-#ax2.set_xticks(pd.to_datetime(['1/7/2019','1/1/2020','1/7/2020'],dayfirst=True))
+dates, data, power_cal = spacial('California_SolarFarms','1/1/2020','31/12/2020','24','California_SolarFarms',40,'PM6Y62')
+nn = data/power_cal * 100
+#print(np.mean(n))
+#n = (n - np.min(n))/(np.max(n)-np.min(n))
+print('PM6:Y6: ',np.mean(nn))
+ax.plot(dates,(nn),c='tab:orange',label="PM6:Y6")
 
-#dates, data, power_cal = spacial('SA_Solar_Distribution','1/7/2019', '1/7/2020','24','SA_Solar_Distribution',40)
-#ax2.plot(dates,data-power_cal,c='tab:olive')
-
-#dates, data, power_cal = spacial('VIC_Solar_Distribution','1/7/2019', '1/7/2020','24','VIC_Solar_Distribution',40)
-#ax2.plot(dates,data-power_cal,c='tab:brown')
-
-# axins = ax.inset_axes([0.3,0.05,0.35,0.35])
-# axins.stackplot(x,y,color='tab:gray')
-# axins.set_yticklabels([])
-# axins.set_ylim(top=5000,bottom=2000)
-#
-# axins2 = axins.twinx()
-#
-# axins2.plot(dates,data,c='tab:olive')
-# axins2.plot(dates,power_cal,c='tab:cyan')
-# axins2.set_xticklabels([])
-# axins2.set_yticklabels([])
-# axins2.set_xlim(pd.to_datetime('5/09/2020',dayfirst=True), pd.to_datetime('19/09/2020',dayfirst=True))
-# axins2.set_ylim(top=165,bottom=100)
-# ax.indicate_inset_zoom(axins,edgecolor='black')
+dates, data, power_cal = spacial('California_SolarFarms','1/1/2020','31/12/2020','24','California_SolarFarms',40,'D18PMIFFPMI')
+nn = data/power_cal * 100
+#print(np.mean(n))
+#n = (n - np.min(n))/(np.max(n)-np.min(n))
+print('D18:PMI-FF-PMI: ',np.mean(nn))
+ax.plot(dates,(nn),c='tab:green',label='D18:PMI-FF-PMI')
 
 
+
+ax.axvspan(dt.datetime(2020,8,16,12),dt.datetime(2020,11,12,12),facecolor='tab:purple',alpha=0.25)
+
+ax.set_ylabel('Geographically Weighted Power Generation (Wm$^{-2}$)')
+#ax.set_ylim(bottom=0)
+ax.set_xlim(dt.datetime(2020,1,1,12),dt.datetime(2021,1,1,12))
+ax.set_xticks(pd.to_datetime(['1/1/2020','1/5/2020','1/9/2020','1/1/2021'],dayfirst=True))
+
+#ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),fancybox=True, shadow=False, ncol=3)
 
 #plt.show()
 #plt.show()
-plt.savefig('Figure_5.png',dpi=600)
-#plt.savefig('SA_Energy_Loss_SolarFarms.png',dpi=600)
+plt.savefig('Figure_Devices_PowerGenPercent.png',dpi=600)
 #plt.savefig('California_Engery_Loss_SolarFarms.png',dpi=600)
 #plt.savefig('California_Engery_Loss_SolarFarms_cloud_cover.png',dpi=600)
 #plt.savefig('California_Engery_Loss.svg')

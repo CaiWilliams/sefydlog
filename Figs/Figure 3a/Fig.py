@@ -6,6 +6,7 @@ import pandas as pd
 import numpy as np
 import os
 import datetime as dt
+import scipy
 from math import cos, asin, sqrt
 
 def fetch_df(name):
@@ -42,7 +43,7 @@ def calc_multiyear(locations, start_date, end_date,noct):
         for year in years:
             #pristine_dir = 'PERC_' + location + '_pristine_' + str(year)
             #polluted_dir = 'PERC_' + location + '_' + str(year)
-            #pristine_dir = 'PERC_' + location + '_pristine_tilt_angle__NOCT_'+ str(noct) + '_' + str(year)
+            pristine_dir = 'FullRes_PERC_' + location + '_pristine_tilt_angle__NOCT_'+ str(noct) + '_' + str(year)
             polluted_dir = 'FullRes_PERC_' + location + '_tilt_angle__NOCT_' + str(noct) + '_' + str(year)
 
             #pristine_df = split_date(fetch_df(pristine_dir))
@@ -139,6 +140,7 @@ def spacial(dir, start_date, end_date, step, locs,noct):
 
     power_cal = np.asarray(power_cal)
     power_cal = np.sum(power_cal,axis=0)/locs_cap_sum
+    print(dates_idx)
     power_cal = power_cal[dates_idx]
 
     # ax.plot(dates,data,c='tab:olive')
@@ -162,14 +164,12 @@ def plot_generation():
     Date = data['OPR_DT'] +' '+ data['OPR_HR'].astype(str)+':00:00'
     data = data.set_index(pd.DatetimeIndex(Date))
     data = data.drop(columns=['OPR_DT','OPR_HR'])
-
     d = data
     #d = data[data['TRADING_HUB'] == 'NP15' & data['TRADING_HUB'] == 'NP15']
     d = d.drop(columns=['TRADING_HUB'])
     d = d.sort_index()
     d = d.groupby(by=d.index).agg(sum)
-    fires_start = dt.datetime(year=2020,month=8,day=16,hour=12)
-    fires_end = dt.datetime(year=2020,month=9,day=25,hour=12)
+
     plt.xlim(d.iloc[0].name,d.iloc[-1].name)
     dates = [dt.datetime(year=2020,month=1,day=1,hour=0),dt.datetime(year=2020,month=4,day=1,hour=0),dt.datetime(year=2020,month=7,day=1,hour=0),dt.datetime(year=2020,month=10,day=1,hour=0),dt.datetime(year=2021,month=1,day=1,hour=0)]
     return d
@@ -193,6 +193,11 @@ def plot_curtailment(gen):
     temp = temp.groupby(temp.index).sum()
     temp['No Cut'] = temp['Solar Curtailment'] + temp['MW'].clip(lower=0)
     temp = temp.resample('24h').mean()
+    fires_start = dt.datetime(year=2020, month=8, day=15, hour=12)
+    fires_end = dt.datetime(year=2020, month=11, day=12, hour=12)
+    mask = (temp.index >= fires_start) & (temp.index <= fires_end)
+    temp = temp.loc[mask]
+    print(temp)
     #temp.index = temp.index.duplicated(keep='first')
     x = temp.index.to_numpy()
     #y = temp['Solar Curtailment'].to_numpy()
@@ -221,18 +226,37 @@ ax2 = ax.twinx()
 #spacial('California_SolarFarms','1/1/2020','31/12/2020','24','California_SolarFarms',20)
 #spacial('California_SolarFarms','1/1/2020','31/12/2020','24','California_SolarFarms',40)
 #spacial('California_SolarFarms','1/1/2020','31/12/2020','24','California_SolarFarms',20)
-dates, data, power_cal = spacial('California_SolarFarms','1/1/2020','31/12/2020','24','California_SolarFarms',40)
+dates, data, power_cal = spacial('California_SolarFarms','16/8/2020','12/11/2020','24','California_SolarFarms',40)
 #plt.xticks([dt.datetime(2020,8,16,12),dt.datetime(2020,9,29,12),dt.datetime(2020,11,12,12)])
 
-
-ax2.plot(dates,data,c='tab:olive')
-ax2.plot(dates,power_cal,c='tab:cyan')
+n = data-power_cal
+n = (n - np.min(n))/(np.max(n)-np.min(n))
+ax2.plot(dates,n,c='tab:pink')
+#ax2.plot(dates,power_cal,c='tab:cyan')
+# print("Mean: ", np.mean(data-power_cal))
+# print("Max: ", np.min(data-power_cal))
 ax2.set_ylabel('Geographically Weighted Power Generation (Wm$^{-2}$)')
-ax2.set_ylim(bottom=0)
+#ax2.set_ylim(bottom=0)
 #ax2.set_xlim(dt.datetime(2020,8,16,12),dt.datetime(2020,11,12,12))
 #ax.axvspan(dt.datetime(2020,8,16,12),dt.datetime(2020,11,12,12),facecolor='tab:purple',alpha=0.25,zorder=50)
 ax2.set_xticks(pd.to_datetime(['1/1/2020','1/5/2020','1/9/2020','1/1/2021'],dayfirst=True))
 
+# Fm_idx = np.argwhere(dates == np.datetime64('2020-08-21T12:00'))[0][0]
+# print("First Minima: 21/08/2020")
+# print("Reported: ", ((np.mean(y[Fm_idx-8:Fm_idx])-y[Fm_idx])/y[Fm_idx])*100,"%")
+# print("Model: ", ((np.mean(data[Fm_idx-8:Fm_idx])-data[Fm_idx])/data[Fm_idx])*100,"%")
+#
+# Fm_idx = np.argwhere(dates == np.datetime64('2020-09-11T12:00'))[0][0]
+# print("First Minima: 21/08/2020")
+# print("Reported: ", ((np.mean(y[Fm_idx-8:Fm_idx])-y[Fm_idx])/y[Fm_idx])*100,"%")
+# print("Model: ", ((np.mean(data[Fm_idx-8:Fm_idx])-data[Fm_idx])/data[Fm_idx])*100,"%")
+
+y = (y - np.min(y))/(np.max(y)-np.min(y))
+data = (data - np.min(data))/(np.max(data)-np.min(data))
+print(len(y))
+print(len(data))
+slope, intercept, r_value, p_value, std_err = scipy.stats.linregress(y, data)
+print("r2: ", r_value)
 # axins = ax.inset_axes([0.3,0.05,0.35,0.35])
 # axins.stackplot(x,y,color='tab:gray')
 # axins.set_yticklabels([])
@@ -251,8 +275,8 @@ ax2.set_xticks(pd.to_datetime(['1/1/2020','1/5/2020','1/9/2020','1/1/2021'],dayf
 
 
 #plt.show()
-#plt.show()
-plt.savefig('Figure_3a.png',dpi=600)
+plt.show()
+#plt.savefig('Figure_3a_PERC.png',dpi=600)
 #plt.savefig('California_Engery_Loss_SolarFarms.png',dpi=600)
 #plt.savefig('California_Engery_Loss_SolarFarms_cloud_cover.png',dpi=600)
 #plt.savefig('California_Engery_Loss.svg')

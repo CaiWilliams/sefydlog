@@ -95,8 +95,8 @@ def loop(locs,start_date,end_date):
             #plt.plot(dates,d[0])
     data_base = np.asarray(data)
 
-    n = ['carbon_dioxide']
-    sheet_names = ['Carbon Dioxide']
+    n = ['TAU550']
+    sheet_names = ['TAU550']
 
     sd = str(start_date.day) + '/' + str(start_date.month) + '/' + str(start_date.year)
     ed = str(end_date.day) + '/' + str(end_date.month) + '/' + str(end_date.year)
@@ -116,10 +116,11 @@ def loop(locs,start_date,end_date):
     #     print(data[:,idx])
     #     print(s)
     #     data[:,idx] = data[:,idx]/s
+    print("Mean: ", np.mean(data[:,:]-data_base[:,:]))
     for idx in range(len(data)):
         plt.plot(dates, data[idx,:]-data_base[idx,:])#, c='tab:blue')
         plt.xticks([dt.datetime(2020,8,1,12),dt.datetime(2020,8,31,12),dt.datetime(2020,9,30,12)])
-        plt.xlim(left=dt.datetime(2020,8,1,12),right=dt.datetime(2020,9,30,12))
+        #plt.xlim(left=dt.datetime(2020,8,1,12),right=dt.datetime(2020,9,30,12))
         plt.ylabel('Electrical Power Loss Recovered \n Removing ' + sheet_names[0] +' (Wm$^{-2}$)')
         #plt.ylim(top=1.5,bottom=0)
         #plt.yticks(ticks=range(len(data)),labels=n,fontsize=9)
@@ -130,7 +131,7 @@ def loop(locs,start_date,end_date):
         #plt.show()
         #plt.clf()
     #plt.show()
-    plt.savefig('Figure_04_'+n+'.png',dpi=600)
+    plt.savefig('Figure_041_'+n+'.png',dpi=600)
 
 loop(['Santa_Clarita_California','Fresno_California','Sacramento_California','Redding_California'],'1/08/2020','30/09/2020')
 #plt.savefig()
